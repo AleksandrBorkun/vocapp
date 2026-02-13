@@ -1,0 +1,28 @@
+import type { Metadata, Viewport } from "next";
+import "./globals.css";
+import ThemeRegistry from "./ThemeRegistry";
+
+export const metadata: Metadata = {
+  title: "VocApp - Learn New Words",
+  description: "Create flashcard sets to learn new words efficiently",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="en">
+      <body>
+        <ThemeRegistry>{children}</ThemeRegistry>
+      </body>
+    </html>
+  );
+}
