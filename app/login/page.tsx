@@ -78,11 +78,11 @@ export default function LoginPage() {
         minHeight: "100vh",
         display: "flex",
         flexDirection: "column",
-        bgcolor: "grey.100",
+        bgcolor: "background.default",
       }}
     >
       {/* Header with gray background */}
-      <Box sx={{ bgcolor: "grey.200", height: 128 }} />
+      <Box sx={{ bgcolor: "background.paper", height: 128 }} />
 
       <Container
         maxWidth="sm"
@@ -101,6 +101,9 @@ export default function LoginPage() {
             width: "100%",
             p: 4,
             borderRadius: 2,
+            bgcolor: "background.paper",
+            border: "1px solid",
+            borderColor: "primary.main",
           }}
         >
           <Typography
@@ -108,7 +111,7 @@ export default function LoginPage() {
             component="h1"
             sx={{
               fontWeight: "bold",
-              color: "grey.900",
+              color: "text.primary",
               mb: 4,
             }}
           >
@@ -134,16 +137,16 @@ export default function LoginPage() {
               sx={{ mb: 2.5 }}
               InputProps={{
                 sx: {
-                  bgcolor: "white",
+                  bgcolor: "background.default",
                   "& fieldset": {
-                    borderColor: "grey.900",
+                    borderColor: "primary.main",
                     borderWidth: 2,
                   },
                   "&:hover fieldset": {
-                    borderColor: "grey.900",
+                    borderColor: "primary.light",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "primary.main",
+                    borderColor: "primary.light",
                   },
                 },
               }}
@@ -162,16 +165,16 @@ export default function LoginPage() {
               sx={{ mb: 2.5 }}
               InputProps={{
                 sx: {
-                  bgcolor: "white",
+                  bgcolor: "background.default",
                   "& fieldset": {
-                    borderColor: "grey.900",
+                    borderColor: "primary.main",
                     borderWidth: 2,
                   },
                   "&:hover fieldset": {
-                    borderColor: "grey.900",
+                    borderColor: "primary.light",
                   },
                   "&.Mui-focused fieldset": {
-                    borderColor: "primary.main",
+                    borderColor: "primary.light",
                   },
                 },
               }}
@@ -184,11 +187,11 @@ export default function LoginPage() {
               disabled={loading}
               sx={{
                 py: 1.5,
-                bgcolor: "#5558D9",
+                bgcolor: "primary.main",
                 fontWeight: 600,
                 borderRadius: 1,
                 "&:hover": {
-                  bgcolor: "#4447b8",
+                  bgcolor: "primary.dark",
                 },
                 "&.Mui-disabled": {
                   opacity: 0.5,
@@ -203,7 +206,7 @@ export default function LoginPage() {
             <Link
               href="/forgot-password"
               style={{
-                color: "#5558D9",
+                color: "#B8CAD9",
                 textDecoration: "none",
                 fontSize: "0.875rem",
                 fontWeight: 500,
@@ -223,11 +226,11 @@ export default function LoginPage() {
               variant="contained"
               sx={{
                 py: 1.5,
-                bgcolor: "#5558D9",
+                bgcolor: "secondary.main",
                 fontWeight: 600,
                 borderRadius: 1,
                 "&:hover": {
-                  bgcolor: "#4447b8",
+                  bgcolor: "primary.main",
                 },
                 "&.Mui-disabled": {
                   opacity: 0.5,
@@ -244,11 +247,11 @@ export default function LoginPage() {
               variant="contained"
               sx={{
                 py: 1.5,
-                bgcolor: "#5558D9",
+                bgcolor: "secondary.main",
                 fontWeight: 600,
                 borderRadius: 1,
                 "&:hover": {
-                  bgcolor: "#4447b8",
+                  bgcolor: "primary.main",
                 },
                 "&.Mui-disabled": {
                   opacity: 0.5,
@@ -263,7 +266,7 @@ export default function LoginPage() {
             <Link
               href="/privacy"
               style={{
-                color: "#5558D9",
+                color: "#B8CAD9",
                 textDecoration: "none",
                 fontSize: "0.875rem",
                 fontWeight: 500,
