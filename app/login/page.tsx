@@ -9,6 +9,15 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import {
+  Container,
+  Box,
+  TextField,
+  Button,
+  Typography,
+  Alert,
+  Paper,
+} from "@mui/material";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -64,108 +73,207 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-gray-100">
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: "grey.100",
+      }}
+    >
       {/* Header with gray background */}
-      <div className="bg-gray-200 h-32"></div>
+      <Box sx={{ bgcolor: "grey.200", height: 128 }} />
 
-      <main className="flex-1 flex items-start justify-center px-4 -mt-16">
-        <div className="w-full max-w-md">
-          <div className="bg-white p-8 rounded-lg shadow-lg">
-            <h1 className="text-3xl font-bold text-gray-900 mb-8">
-              Welcome to VocApp
-            </h1>
+      <Container
+        maxWidth="sm"
+        sx={{
+          flex: 1,
+          display: "flex",
+          alignItems: "flex-start",
+          justifyContent: "center",
+          px: 2,
+          mt: -8,
+        }}
+      >
+        <Paper
+          elevation={3}
+          sx={{
+            width: "100%",
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <Typography
+            variant="h3"
+            component="h1"
+            sx={{
+              fontWeight: "bold",
+              color: "grey.900",
+              mb: 4,
+            }}
+          >
+            Welcome to VocApp
+          </Typography>
 
-            {error && (
-              <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded text-red-700 text-sm">
-                {error}
-              </div>
-            )}
+          {error && (
+            <Alert severity="error" sx={{ mb: 2 }}>
+              {error}
+            </Alert>
+          )}
 
-            <form onSubmit={handleSubmit} className="space-y-5">
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm text-gray-700 mb-2"
-                >
-                  email
-                </label>
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-900 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-light transition-colors"
-                  placeholder="superhero@miro.com"
-                  required
-                />
-              </div>
+          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 2 }}>
+            <TextField
+              fullWidth
+              type="email"
+              id="email"
+              label="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="superhero@miro.com"
+              required
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                sx: {
+                  bgcolor: "white",
+                  "& fieldset": {
+                    borderColor: "grey.900",
+                    borderWidth: 2,
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "grey.900",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "primary.main",
+                  },
+                },
+              }}
+            />
 
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm text-gray-700 mb-2"
-                >
-                  password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-white border-2 border-gray-900 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-light transition-colors"
-                  placeholder="your password"
-                  required
-                  minLength={6}
-                />
-              </div>
+            <TextField
+              fullWidth
+              type="password"
+              id="password"
+              label="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="your password"
+              required
+              inputProps={{ minLength: 6 }}
+              sx={{ mb: 2.5 }}
+              InputProps={{
+                sx: {
+                  bgcolor: "white",
+                  "& fieldset": {
+                    borderColor: "grey.900",
+                    borderWidth: 2,
+                  },
+                  "&:hover fieldset": {
+                    borderColor: "grey.900",
+                  },
+                  "&.Mui-focused fieldset": {
+                    borderColor: "primary.main",
+                  },
+                },
+              }}
+            />
 
-              <button
-                type="submit"
-                disabled={loading}
-                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? "Please wait..." : "Login"}
-              </button>
-            </form>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              disabled={loading}
+              sx={{
+                py: 1.5,
+                bgcolor: "#5558D9",
+                fontWeight: 600,
+                borderRadius: 1,
+                "&:hover": {
+                  bgcolor: "#4447b8",
+                },
+                "&.Mui-disabled": {
+                  opacity: 0.5,
+                },
+              }}
+            >
+              {loading ? "Please wait..." : "Login"}
+            </Button>
+          </Box>
 
-            <div className="mt-4 text-center">
-              <Link
-                href="/forgot-password"
-                className="text-[#5558D9] hover:text-[#4447b8] text-sm font-medium"
-              >
-                Forgot password?
-              </Link>
-            </div>
+          <Box sx={{ mt: 2, textAlign: "center" }}>
+            <Link
+              href="/forgot-password"
+              style={{
+                color: "#5558D9",
+                textDecoration: "none",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+              }}
+            >
+              Forgot password?
+            </Link>
+          </Box>
 
-            <div className="mt-6 space-y-3">
-              <button
-                onClick={handleGoogleSignIn}
-                disabled={loading}
-                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue with Google
-              </button>
+          <Box
+            sx={{ mt: 3, display: "flex", flexDirection: "column", gap: 1.5 }}
+          >
+            <Button
+              onClick={handleGoogleSignIn}
+              disabled={loading}
+              fullWidth
+              variant="contained"
+              sx={{
+                py: 1.5,
+                bgcolor: "#5558D9",
+                fontWeight: 600,
+                borderRadius: 1,
+                "&:hover": {
+                  bgcolor: "#4447b8",
+                },
+                "&.Mui-disabled": {
+                  opacity: 0.5,
+                },
+              }}
+            >
+              Continue with Google
+            </Button>
 
-              <button
-                onClick={handleFacebookSignIn}
-                disabled={loading}
-                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Continue with FB
-              </button>
-            </div>
+            <Button
+              onClick={handleFacebookSignIn}
+              disabled={loading}
+              fullWidth
+              variant="contained"
+              sx={{
+                py: 1.5,
+                bgcolor: "#5558D9",
+                fontWeight: 600,
+                borderRadius: 1,
+                "&:hover": {
+                  bgcolor: "#4447b8",
+                },
+                "&.Mui-disabled": {
+                  opacity: 0.5,
+                },
+              }}
+            >
+              Continue with FB
+            </Button>
+          </Box>
 
-            <div className="mt-6 text-center">
-              <Link
-                href="/privacy"
-                className="text-[#5558D9] hover:text-[#4447b8] text-sm font-medium"
-              >
-                Privacy
-              </Link>
-            </div>
-          </div>
-        </div>
-      </main>
-    </div>
+          <Box sx={{ mt: 3, textAlign: "center" }}>
+            <Link
+              href="/privacy"
+              style={{
+                color: "#5558D9",
+                textDecoration: "none",
+                fontSize: "0.875rem",
+                fontWeight: 500,
+              }}
+            >
+              Privacy
+            </Link>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   );
 }

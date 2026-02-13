@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
+import ThemeRegistry from "./ThemeRegistry";
 
 export const metadata: Metadata = {
   title: "VocApp - Learn New Words",
@@ -19,7 +20,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <ThemeRegistry>{children}</ThemeRegistry>
+      </body>
     </html>
   );
 }

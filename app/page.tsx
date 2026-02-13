@@ -1,74 +1,289 @@
-import Link from 'next/link';
+import Link from "next/link";
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Grid,
+  Card,
+  CardContent,
+} from "@mui/material";
 
 export default function Home() {
   return (
-    <div className="min-h-screen flex flex-col bg-primary-dark">
+    <Box
+      sx={{
+        minHeight: "100vh",
+        display: "flex",
+        flexDirection: "column",
+        bgcolor: "background.default",
+      }}
+    >
       {/* Header */}
-      <header className="p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary-pale">VocApp</h1>
-          <Link 
-            href="/login"
-            className="px-4 sm:px-6 py-2 bg-primary-light text-primary-pale rounded-lg hover:bg-primary-gray transition-colors"
+      <Box component="header" sx={{ p: { xs: 2, sm: 3 } }}>
+        <Container
+          maxWidth="lg"
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            sx={{
+              fontWeight: "bold",
+              color: "text.primary",
+              fontSize: { xs: "1.5rem", sm: "1.875rem" },
+            }}
           >
-            Login
+            VocApp
+          </Typography>
+          <Link href="/login" style={{ textDecoration: "none" }}>
+            <Button
+              variant="contained"
+              sx={{
+                px: { xs: 2, sm: 3 },
+                py: 1,
+                bgcolor: "primary.main",
+                color: "text.primary",
+                borderRadius: 2,
+                "&:hover": {
+                  bgcolor: "secondary.main",
+                },
+              }}
+            >
+              Login
+            </Button>
           </Link>
-        </div>
-      </header>
+        </Container>
+      </Box>
 
       {/* Hero Section */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 sm:px-6 py-12 sm:py-20">
-        <div className="max-w-3xl mx-auto text-center">
-          <h2 className="text-4xl sm:text-5xl md:text-6xl font-bold text-primary-pale mb-6">
-            Learn New Words
-            <span className="block text-primary-light mt-2">The Smart Way</span>
-          </h2>
-          
-          <p className="text-lg sm:text-xl text-primary-gray mb-8 sm:mb-12 max-w-2xl mx-auto">
-            Create custom flashcard sets and master new vocabulary at your own pace.
-            Perfect for students, language learners, and anyone expanding their knowledge.
-          </p>
-
-          <Link 
-            href="/login"
-            className="inline-block px-8 sm:px-12 py-3 sm:py-4 bg-primary-light text-primary-pale text-lg sm:text-xl font-semibold rounded-lg hover:bg-primary-gray transition-colors shadow-lg"
+      <Box
+        component="main"
+        sx={{
+          flex: 1,
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          px: { xs: 2, sm: 3 },
+          py: { xs: 6, sm: 10 },
+        }}
+      >
+        <Container maxWidth="md" sx={{ textAlign: "center" }}>
+          <Typography
+            variant="h2"
+            component="h2"
+            sx={{
+              fontWeight: "bold",
+              color: "text.primary",
+              mb: 3,
+              fontSize: { xs: "2.5rem", sm: "3rem", md: "3.75rem" },
+            }}
           >
-            Get Started
+            Learn New Words
+            <Typography
+              component="span"
+              sx={{
+                display: "block",
+                color: "primary.main",
+                mt: 1,
+              }}
+            >
+              The Smart Way
+            </Typography>
+          </Typography>
+
+          <Typography
+            variant="h6"
+            sx={{
+              color: "secondary.main",
+              mb: { xs: 4, sm: 6 },
+              maxWidth: "42rem",
+              mx: "auto",
+              fontSize: { xs: "1.125rem", sm: "1.25rem" },
+            }}
+          >
+            Create custom flashcard sets and master new vocabulary at your own
+            pace. Perfect for students, language learners, and anyone expanding
+            their knowledge.
+          </Typography>
+
+          <Link href="/login" style={{ textDecoration: "none" }}>
+            <Button
+              variant="contained"
+              size="large"
+              sx={{
+                px: { xs: 4, sm: 6 },
+                py: { xs: 1.5, sm: 2 },
+                bgcolor: "primary.main",
+                color: "text.primary",
+                fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                fontWeight: 600,
+                borderRadius: 2,
+                boxShadow: 3,
+                "&:hover": {
+                  bgcolor: "secondary.main",
+                },
+              }}
+            >
+              Get Started
+            </Button>
           </Link>
-        </div>
+        </Container>
 
         {/* Features */}
-        <div className="mt-16 sm:mt-24 grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8 max-w-5xl w-full">
-          <div className="bg-primary-medium p-6 sm:p-8 rounded-lg border border-primary-gray">
-            <div className="text-3xl sm:text-4xl mb-4">📚</div>
-            <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">Create Card Sets</h3>
-            <p className="text-primary-gray text-sm sm:text-base">
-              Build your own flashcard collections for any subject or language
-            </p>
-          </div>
+        <Container maxWidth="lg" sx={{ mt: { xs: 8, sm: 12 }, width: "100%" }}>
+          <Grid container spacing={{ xs: 3, sm: 4 }}>
+            <Grid item xs={12} sm={4}>
+              <Card
+                sx={{
+                  bgcolor: "background.paper",
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: "secondary.main",
+                  height: "100%",
+                }}
+              >
+                <CardContent sx={{ p: 0 }}>
+                  <Typography
+                    sx={{ fontSize: { xs: "2rem", sm: "2.5rem" }, mb: 2 }}
+                  >
+                    📚
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    sx={{
+                      fontWeight: 600,
+                      color: "text.primary",
+                      mb: 1,
+                      fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                    }}
+                  >
+                    Create Card Sets
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "secondary.main",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                    }}
+                  >
+                    Build your own flashcard collections for any subject or
+                    language
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-          <div className="bg-primary-medium p-6 sm:p-8 rounded-lg border border-primary-gray">
-            <div className="text-3xl sm:text-4xl mb-4">🧠</div>
-            <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">Study Anytime</h3>
-            <p className="text-primary-gray text-sm sm:text-base">
-              Practice on any device with our mobile-friendly interface
-            </p>
-          </div>
+            <Grid item xs={12} sm={4}>
+              <Card
+                sx={{
+                  bgcolor: "background.paper",
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: "secondary.main",
+                  height: "100%",
+                }}
+              >
+                <CardContent sx={{ p: 0 }}>
+                  <Typography
+                    sx={{ fontSize: { xs: "2rem", sm: "2.5rem" }, mb: 2 }}
+                  >
+                    🧠
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    sx={{
+                      fontWeight: 600,
+                      color: "text.primary",
+                      mb: 1,
+                      fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                    }}
+                  >
+                    Study Anytime
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "secondary.main",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                    }}
+                  >
+                    Practice on any device with our mobile-friendly interface
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
 
-          <div className="bg-primary-medium p-6 sm:p-8 rounded-lg border border-primary-gray">
-            <div className="text-3xl sm:text-4xl mb-4">📈</div>
-            <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">Track Progress</h3>
-            <p className="text-primary-gray text-sm sm:text-base">
-              Monitor your learning journey and master new words efficiently
-            </p>
-          </div>
-        </div>
-      </main>
+            <Grid item xs={12} sm={4}>
+              <Card
+                sx={{
+                  bgcolor: "background.paper",
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  border: 1,
+                  borderColor: "secondary.main",
+                  height: "100%",
+                }}
+              >
+                <CardContent sx={{ p: 0 }}>
+                  <Typography
+                    sx={{ fontSize: { xs: "2rem", sm: "2.5rem" }, mb: 2 }}
+                  >
+                    📈
+                  </Typography>
+                  <Typography
+                    variant="h6"
+                    component="h3"
+                    sx={{
+                      fontWeight: 600,
+                      color: "text.primary",
+                      mb: 1,
+                      fontSize: { xs: "1.125rem", sm: "1.25rem" },
+                    }}
+                  >
+                    Track Progress
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "secondary.main",
+                      fontSize: { xs: "0.875rem", sm: "1rem" },
+                    }}
+                  >
+                    Monitor your learning journey and master new words
+                    efficiently
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grid>
+        </Container>
+      </Box>
 
       {/* Footer */}
-      <footer className="p-6 text-center text-primary-gray border-t border-primary-gray">
-        <p className="text-sm">© 2026 VocApp. Learn smarter, not harder.</p>
-      </footer>
-    </div>
+      <Box
+        component="footer"
+        sx={{
+          p: 3,
+          textAlign: "center",
+          color: "secondary.main",
+          borderTop: 1,
+          borderColor: "secondary.main",
+        }}
+      >
+        <Typography variant="body2" sx={{ fontSize: "0.875rem" }}>
+          © 2026 VocApp. Learn smarter, not harder.
+        </Typography>
+      </Box>
+    </Box>
   );
 }

@@ -14,6 +14,36 @@ import {
   updateDoc,
 } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
+import {
+  Box,
+  Container,
+  Typography,
+  Button,
+  Card,
+  CardContent,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
+  TextField,
+  Grid,
+  IconButton,
+  CircularProgress,
+  Alert,
+  Slide,
+  LinearProgress,
+} from "@mui/material";
+import { TransitionProps } from "@mui/material/transitions";
+import { forwardRef } from "react";
+
+const SlideTransition = forwardRef(function Transition(
+  props: TransitionProps & {
+    children: React.ReactElement<any, any>;
+  },
+  ref: React.Ref<unknown>,
+) {
+  return <Slide direction="down" ref={ref} {...props} />;
+});
 
 interface CardSet {
   id: string;
@@ -240,300 +270,571 @@ export default function HomePage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-dark">
-        <div className="text-primary-pale text-xl">Loading...</div>
-      </div>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "background.default",
+        }}
+      >
+        <CircularProgress size={60} />
+      </Box>
     );
   }
 
   if (error) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-primary-dark p-4">
-        <div className="bg-primary-medium p-8 rounded-lg border border-red-500 max-w-md">
-          <h2 className="text-xl font-bold text-red-400 mb-4">Error</h2>
-          <p className="text-primary-pale mb-6">{error}</p>
-          <div className="flex gap-3">
-            <button
+      <Box
+        sx={{
+          minHeight: "100vh",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          bgcolor: "background.default",
+          p: 2,
+        }}
+      >
+        <Card
+          sx={{
+            bgcolor: "background.paper",
+            p: 4,
+            borderRadius: 2,
+            border: 1,
+            borderColor: "error.main",
+            maxWidth: "md",
+          }}
+        >
+          <Typography variant="h5" fontWeight="bold" color="error" mb={2}>
+            Error
+          </Typography>
+          <Typography color="text.primary" mb={3}>
+            {error}
+          </Typography>
+          <Box sx={{ display: "flex", gap: 1.5 }}>
+            <Button
               onClick={() => window.location.reload()}
-              className="flex-1 px-4 py-2 bg-primary-light text-primary-pale rounded hover:bg-primary-gray transition-colors"
+              variant="contained"
+              sx={{ flex: 1 }}
             >
               Retry
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => router.push("/login")}
-              className="flex-1 px-4 py-2 bg-primary-dark text-primary-pale rounded hover:bg-primary-gray transition-colors"
+              variant="outlined"
+              sx={{ flex: 1 }}
             >
               Back to Login
-            </button>
-          </div>
-        </div>
-      </div>
+            </Button>
+          </Box>
+        </Card>
+      </Box>
     );
   }
 
   return (
-    <div className="min-h-screen bg-primary-dark">
+    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
       {/* Header */}
-      <header className="bg-primary-medium border-b border-primary-gray p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary-pale">
+      <Box
+        component="header"
+        sx={{
+          bgcolor: "background.paper",
+          borderBottom: 1,
+          borderColor: "secondary.main",
+          p: { xs: 2, sm: 3 },
+        }}
+      >
+        <Container
+          maxWidth="lg"
+          sx={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <Typography
+            variant="h4"
+            component="h1"
+            fontWeight="bold"
+            color="text.primary"
+            sx={{ fontSize: { xs: "1.5rem", sm: "1.875rem" } }}
+          >
             VocApp
-          </h1>
-          <button
+          </Typography>
+          <Button
             onClick={handleSignOut}
-            className="px-4 py-2 text-primary-pale hover:text-primary-light transition-colors text-sm sm:text-base"
+            color="inherit"
+            sx={{
+              color: "text.primary",
+              "&:hover": { color: "primary.main" },
+              fontSize: { xs: "0.875rem", sm: "1rem" },
+            }}
           >
             Sign Out
-          </button>
-        </div>
-      </header>
+          </Button>
+        </Container>
+      </Box>
 
       {/* Main Content */}
-      <main className="max-w-6xl mx-auto p-4 sm:p-6">
-        <div className="mb-6">
-          <div className="mb-4">
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary-pale mb-2">
-              My Card Sets
-            </h2>
-            <p className="text-primary-gray">Welcome back, {user?.email}</p>
-          </div>
-        </div>
+      <Container component="main" maxWidth="lg" sx={{ p: { xs: 2, sm: 3 } }}>
+        <Box sx={{ mb: 3 }}>
+          <Typography
+            variant="h4"
+            component="h2"
+            fontWeight="bold"
+            color="text.primary"
+            mb={1}
+            sx={{ fontSize: { xs: "1.5rem", sm: "1.875rem" } }}
+          >
+            My Card Sets
+          </Typography>
+          <Typography color="secondary.main">
+            Welcome back, {user?.email}
+          </Typography>
+        </Box>
 
         {/* Card Sets Grid */}
         {cardSets.length === 0 ? (
-          <div className="flex justify-center py-12 px-6">
-            <button
+          <Box sx={{ display: "flex", justifyContent: "center", py: 6, px: 3 }}>
+            <Button
               onClick={() => setShowCreateModal(true)}
-              className="bg-white p-8 sm:p-10 rounded-lg shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group h-[80vh] w-[calc(100%-3rem)] max-w-xl border-2 border-dashed border-gray-300 hover:border-primary-light"
+              sx={{
+                bgcolor: "white",
+                p: { xs: 4, sm: 5 },
+                borderRadius: 2,
+                boxShadow: 3,
+                "&:hover": { boxShadow: 6 },
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+                height: "80vh",
+                width: "calc(100% - 3rem)",
+                maxWidth: "xl",
+                border: 2,
+                borderStyle: "dashed",
+                borderColor: "grey.300",
+                "&:hover .add-icon": {
+                  transform: "scale(1.1)",
+                },
+              }}
             >
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
+              <Box
+                className="add-icon"
+                sx={{
+                  fontSize: "3rem",
+                  mb: 2,
+                  transition: "transform 0.2s",
+                }}
+              >
                 ➕
-              </div>
-              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3">
+              </Box>
+              <Typography
+                variant="h5"
+                fontWeight={600}
+                color="grey.800"
+                mb={1.5}
+                sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+              >
                 Create Your First Set
-              </h3>
-              <p className="text-gray-600 text-sm">
+              </Typography>
+              <Typography variant="body2" color="grey.600">
                 You don't have any card sets yet. Start building your flashcard
                 collection now!
-              </p>
-            </button>
-          </div>
+              </Typography>
+            </Button>
+          </Box>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+          <Grid container spacing={{ xs: 2, sm: 3 }}>
             {/* Create New Set Card */}
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-white p-6 sm:p-8 mx-4 sm:mx-2 rounded-lg shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group h-[80vh] border-2 border-dashed border-gray-300 hover:border-primary-light"
-            >
-              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
-                ➕
-              </div>
-              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
-                Create New Set
-              </h3>
-              <p className="text-gray-600 text-sm">
-                Build a new flashcard collection
-              </p>
-            </button>
+            <Grid item xs={12} sm={6} lg={4}>
+              <Button
+                onClick={() => setShowCreateModal(true)}
+                sx={{
+                  bgcolor: "white",
+                  p: { xs: 3, sm: 4 },
+                  borderRadius: 2,
+                  boxShadow: 3,
+                  display: "flex",
+                  flexDirection: "column",
+                  alignItems: "center",
+                  textAlign: "center",
+                  height: "80vh",
+                  width: "100%",
+                  border: 2,
+                  borderStyle: "dashed",
+                  borderColor: "grey.300",
+                  "&:hover": {
+                    boxShadow: 6,
+                    borderColor: "primary.main",
+                  },
+                  "&:hover .add-icon": {
+                    transform: "scale(1.1)",
+                  },
+                }}
+              >
+                <Box
+                  className="add-icon"
+                  sx={{
+                    fontSize: "3rem",
+                    mb: 2,
+                    transition: "transform 0.2s",
+                  }}
+                >
+                  ➕
+                </Box>
+                <Typography
+                  variant="h6"
+                  fontWeight={600}
+                  color="grey.800"
+                  mb={1}
+                  sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                >
+                  Create New Set
+                </Typography>
+                <Typography variant="body2" color="grey.600">
+                  Build a new flashcard collection
+                </Typography>
+              </Button>
+            </Grid>
 
             {cardSets.map((set) => (
-              <div
-                key={set.id}
-                className="bg-primary-medium p-4 sm:p-6 rounded-lg border border-primary-gray hover:border-primary-light transition-colors"
-              >
-                <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">
-                  {set.name}
-                </h3>
-                <p className="text-primary-gray text-sm mb-4">
-                  {set.description}
-                </p>
-                <p className="text-primary-pale text-sm mb-4">
-                  {set.cards.length} cards
-                </p>
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => startStudying(set)}
-                    className="flex-1 px-4 py-2 bg-primary-light text-primary-pale rounded hover:bg-primary-gray transition-colors text-sm"
-                  >
-                    Study
-                  </button>
-                  <button
-                    onClick={() => handleDeleteSet(set.id)}
-                    className="px-4 py-2 bg-red-900/30 text-red-300 rounded hover:bg-red-900/50 transition-colors text-sm"
-                  >
-                    Delete
-                  </button>
-                </div>
-              </div>
+              <Grid item xs={12} sm={6} lg={4} key={set.id}>
+                <Card
+                  sx={{
+                    bgcolor: "background.paper",
+                    p: { xs: 2, sm: 3 },
+                    borderRadius: 2,
+                    border: 1,
+                    borderColor: "secondary.main",
+                    "&:hover": {
+                      borderColor: "primary.main",
+                    },
+                    height: "100%",
+                  }}
+                >
+                  <CardContent sx={{ p: 0 }}>
+                    <Typography
+                      variant="h6"
+                      fontWeight={600}
+                      color="text.primary"
+                      mb={1}
+                      sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                    >
+                      {set.name}
+                    </Typography>
+                    <Typography variant="body2" color="secondary.main" mb={2}>
+                      {set.description}
+                    </Typography>
+                    <Typography variant="body2" color="text.primary" mb={2}>
+                      {set.cards.length} cards
+                    </Typography>
+                    <Box sx={{ display: "flex", gap: 1 }}>
+                      <Button
+                        onClick={() => startStudying(set)}
+                        variant="contained"
+                        size="small"
+                        sx={{ flex: 1 }}
+                      >
+                        Study
+                      </Button>
+                      <Button
+                        onClick={() => handleDeleteSet(set.id)}
+                        variant="outlined"
+                        size="small"
+                        color="error"
+                        sx={{
+                          bgcolor: "error.dark",
+                          color: "error.light",
+                          borderColor: "error.dark",
+                          "&:hover": {
+                            bgcolor: "error.main",
+                            borderColor: "error.main",
+                          },
+                        }}
+                      >
+                        Delete
+                      </Button>
+                    </Box>
+                  </CardContent>
+                </Card>
+              </Grid>
             ))}
-          </div>
+          </Grid>
         )}
-      </main>
+      </Container>
 
       {/* Create Modal */}
-      {showCreateModal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 overflow-y-auto">
-          <div className="bg-primary-medium rounded-lg p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-primary-gray">
-            <h2 className="text-2xl font-bold text-primary-pale mb-6">
-              Create New Card Set
-            </h2>
-            <form onSubmit={handleCreateSet} className="space-y-4">
-              <div>
-                <label className="block text-primary-pale mb-2 text-sm font-medium">
-                  Set Name
-                </label>
-                <input
-                  type="text"
-                  value={newSetName}
-                  onChange={(e) => setNewSetName(e.target.value)}
-                  className="w-full px-4 py-2 bg-primary-dark border border-primary-gray rounded text-primary-pale focus:outline-none focus:border-primary-light"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-primary-pale mb-2 text-sm font-medium">
-                  Description
-                </label>
-                <input
-                  type="text"
-                  value={newSetDescription}
-                  onChange={(e) => setNewSetDescription(e.target.value)}
-                  className="w-full px-4 py-2 bg-primary-dark border border-primary-gray rounded text-primary-pale focus:outline-none focus:border-primary-light"
-                />
-              </div>
+      <Dialog
+        open={showCreateModal}
+        onClose={() => {
+          setShowCreateModal(false);
+          setNewSetName("");
+          setNewSetDescription("");
+          setNewCards([{ front: "", back: "" }]);
+        }}
+        maxWidth="md"
+        fullWidth
+        TransitionComponent={SlideTransition}
+        PaperProps={{
+          sx: {
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            border: 1,
+            borderColor: "secondary.main",
+          },
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h5" fontWeight="bold" color="text.primary">
+            Create New Card Set
+          </Typography>
+        </DialogTitle>
+        <DialogContent sx={{ maxHeight: "70vh" }}>
+          <Box
+            component="form"
+            id="createSetForm"
+            onSubmit={handleCreateSet}
+            sx={{ mt: 2 }}
+          >
+            <TextField
+              fullWidth
+              label="Set Name"
+              value={newSetName}
+              onChange={(e) => setNewSetName(e.target.value)}
+              required
+              sx={{ mb: 2 }}
+            />
+            <TextField
+              fullWidth
+              label="Description"
+              value={newSetDescription}
+              onChange={(e) => setNewSetDescription(e.target.value)}
+              sx={{ mb: 3 }}
+            />
 
-              <div>
-                <label className="block text-primary-pale mb-4 text-sm font-medium">
-                  Cards
-                </label>
-                {newCards.map((card, index) => (
-                  <div
-                    key={index}
-                    className="mb-4 p-4 bg-primary-dark rounded border border-primary-gray"
-                  >
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-primary-pale text-sm">
-                        Card {index + 1}
-                      </span>
-                      {newCards.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeCard(index)}
-                          className="text-red-400 hover:text-red-300 text-sm"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <input
-                      type="text"
-                      placeholder="Front (e.g., Word)"
-                      value={card.front}
-                      onChange={(e) =>
-                        updateCard(index, "front", e.target.value)
-                      }
-                      className="w-full px-3 py-2 mb-2 bg-primary-medium border border-primary-gray rounded text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light text-sm"
-                    />
-                    <input
-                      type="text"
-                      placeholder="Back (e.g., Definition)"
-                      value={card.back}
-                      onChange={(e) =>
-                        updateCard(index, "back", e.target.value)
-                      }
-                      className="w-full px-3 py-2 bg-primary-medium border border-primary-gray rounded text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light text-sm"
-                    />
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  onClick={addCardInput}
-                  className="w-full py-2 border-2 border-dashed border-primary-gray text-primary-gray hover:border-primary-light hover:text-primary-light rounded transition-colors text-sm"
-                >
-                  + Add Another Card
-                </button>
-              </div>
-
-              <div className="flex gap-3 pt-4">
-                <button
-                  type="submit"
-                  className="flex-1 py-3 bg-primary-light text-primary-pale font-semibold rounded hover:bg-primary-gray transition-colors"
-                >
-                  Create Set
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowCreateModal(false);
-                    setNewSetName("");
-                    setNewSetDescription("");
-                    setNewCards([{ front: "", back: "" }]);
+            <Typography
+              variant="body2"
+              fontWeight={500}
+              color="text.primary"
+              mb={2}
+            >
+              Cards
+            </Typography>
+            {newCards.map((card, index) => (
+              <Card
+                key={index}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  bgcolor: "background.default",
+                  border: 1,
+                  borderColor: "secondary.main",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 1,
                   }}
-                  className="flex-1 py-3 bg-primary-dark text-primary-pale rounded hover:bg-primary-gray transition-colors"
                 >
-                  Cancel
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+                  <Typography variant="body2" color="text.primary">
+                    Card {index + 1}
+                  </Typography>
+                  {newCards.length > 1 && (
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => removeCard(index)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Box>
+                <TextField
+                  fullWidth
+                  placeholder="Front (e.g., Word)"
+                  value={card.front}
+                  onChange={(e) => updateCard(index, "front", e.target.value)}
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  placeholder="Back (e.g., Definition)"
+                  value={card.back}
+                  onChange={(e) => updateCard(index, "back", e.target.value)}
+                  size="small"
+                />
+              </Card>
+            ))}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={addCardInput}
+              sx={{
+                py: 1,
+                border: 2,
+                borderStyle: "dashed",
+                borderColor: "secondary.main",
+                color: "secondary.main",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  borderStyle: "dashed",
+                  border: 2,
+                },
+              }}
+            >
+              + Add Another Card
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{ p: 3, borderTop: 1, borderColor: "secondary.main" }}
+        >
+          <Button
+            onClick={() => {
+              setShowCreateModal(false);
+              setNewSetName("");
+              setNewSetDescription("");
+              setNewCards([{ front: "", back: "" }]);
+            }}
+            variant="outlined"
+            sx={{ flex: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="createSetForm"
+            variant="contained"
+            sx={{ flex: 1 }}
+          >
+            Create Set
+          </Button>
+        </DialogActions>
+      </Dialog>
 
       {/* Study Modal */}
-      {showStudyModal && currentSet && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
-          <div className="bg-primary-medium rounded-lg p-6 sm:p-8 max-w-lg w-full border border-primary-gray">
-            <div className="mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-primary-pale mb-2">
+      <Dialog
+        open={showStudyModal}
+        onClose={() => setShowStudyModal(false)}
+        maxWidth="sm"
+        fullWidth
+        TransitionComponent={SlideTransition}
+        PaperProps={{
+          sx: {
+            bgcolor: "background.paper",
+            borderRadius: { xs: 0, sm: 2 },
+            borderTopLeftRadius: 0,
+            borderTopRightRadius: 0,
+            border: 1,
+            borderColor: "secondary.main",
+            m: 0,
+            position: { xs: "fixed", sm: "relative" },
+            top: { xs: 0, sm: "auto" },
+          },
+        }}
+      >
+        {currentSet && (
+          <>
+            <DialogTitle>
+              <Typography
+                variant="h5"
+                fontWeight="bold"
+                color="text.primary"
+                mb={1}
+              >
                 {currentSet.name}
-              </h2>
-              <p className="text-primary-gray text-sm">
+              </Typography>
+              <Typography variant="body2" color="secondary.main">
                 Card {currentCardIndex + 1} of {currentSet.cards.length}
-              </p>
-            </div>
-
-            <div
-              onClick={() => setIsFlipped(!isFlipped)}
-              className="bg-primary-dark p-8 sm:p-12 rounded-lg border-2 border-primary-gray hover:border-primary-light transition-colors cursor-pointer min-h-[200px] flex items-center justify-center mb-6"
-            >
-              <p className="text-xl sm:text-2xl text-primary-pale text-center">
-                {isFlipped
-                  ? currentSet.cards[currentCardIndex].back
-                  : currentSet.cards[currentCardIndex].front}
-              </p>
-            </div>
-
-            <p className="text-center text-primary-gray text-sm mb-6">
-              {isFlipped ? "Click to see front" : "Click to see back"}
-            </p>
-
-            <div className="flex gap-3">
-              <button
-                onClick={previousCard}
-                disabled={currentCardIndex === 0}
-                className="flex-1 py-3 bg-primary-dark text-primary-pale rounded hover:bg-primary-gray transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
+              </Typography>
+              <LinearProgress
+                variant="determinate"
+                value={((currentCardIndex + 1) / currentSet.cards.length) * 100}
+                sx={{ mt: 1 }}
+              />
+            </DialogTitle>
+            <DialogContent>
+              <Card
+                onClick={() => setIsFlipped(!isFlipped)}
+                sx={{
+                  bgcolor: "background.default",
+                  p: { xs: 4, sm: 6 },
+                  borderRadius: 2,
+                  border: 2,
+                  borderColor: "secondary.main",
+                  "&:hover": {
+                    borderColor: "primary.main",
+                  },
+                  cursor: "pointer",
+                  minHeight: 200,
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  mb: 3,
+                }}
               >
-                Previous
-              </button>
-              <button
-                onClick={nextCard}
-                className="flex-1 py-3 bg-primary-light text-primary-pale rounded hover:bg-primary-gray transition-colors"
-              >
-                {currentCardIndex === currentSet.cards.length - 1
-                  ? "Finish"
-                  : "Next"}
-              </button>
-            </div>
+                <Typography
+                  variant="h5"
+                  color="text.primary"
+                  textAlign="center"
+                  sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+                >
+                  {isFlipped
+                    ? currentSet.cards[currentCardIndex].back
+                    : currentSet.cards[currentCardIndex].front}
+                </Typography>
+              </Card>
 
-            <button
-              onClick={() => setShowStudyModal(false)}
-              className="w-full mt-3 py-2 text-primary-gray hover:text-primary-pale transition-colors text-sm"
-            >
-              Close
-            </button>
-          </div>
-        </div>
-      )}
-    </div>
+              <Typography
+                variant="body2"
+                color="secondary.main"
+                textAlign="center"
+                mb={3}
+              >
+                {isFlipped ? "Click to see front" : "Click to see back"}
+              </Typography>
+
+              <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
+                <Button
+                  onClick={previousCard}
+                  disabled={currentCardIndex === 0}
+                  variant="outlined"
+                  sx={{ flex: 1, py: 1.5 }}
+                >
+                  Previous
+                </Button>
+                <Button
+                  onClick={nextCard}
+                  variant="contained"
+                  sx={{ flex: 1, py: 1.5 }}
+                >
+                  {currentCardIndex === currentSet.cards.length - 1
+                    ? "Finish"
+                    : "Next"}
+                </Button>
+              </Box>
+
+              <Button
+                onClick={() => setShowStudyModal(false)}
+                fullWidth
+                sx={{
+                  color: "secondary.main",
+                  "&:hover": { color: "text.primary" },
+                }}
+              >
+                Close
+              </Button>
+            </DialogContent>
+          </>
+        )}
+      </Dialog>
+    </Box>
   );
 }
