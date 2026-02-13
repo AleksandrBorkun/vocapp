@@ -13,7 +13,7 @@ import {
   doc,
   updateDoc,
 } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
+import { auth, db, getUserDocument } from "@/lib/firebase";
 import {
   Box,
   Container,
@@ -103,26 +103,39 @@ export default function HomePage() {
 
       if (currentUser) {
         setUser(currentUser);
-        console.log("About to load card sets...");
-
-        // Add timeout for loadCardSets
-        const loadTimeout = setTimeout(() => {
-          console.error(
-            "Loading card sets timed out - likely a Firestore permissions issue",
-          );
-          setError(
-            "Unable to load data. Please check Firestore security rules.",
-          );
-          setLoading(false);
-        }, 5000);
+        console.log("About to check user document...");
 
         try {
+          // Check if user document exists (onboarding completed)
+          const userDoc = await getUserDocument(currentUser.uid);
+
+          if (!userDoc) {
+            // User document doesn't exist - redirect to onboarding
+            console.log("No user document found, redirecting to onboarding");
+            router.push("/onboarding");
+            setLoading(false);
+            return;
+          }
+
+          console.log("User document found, loading card sets...");
+
+          // Add timeout for loadCardSets
+          const loadTimeout = setTimeout(() => {
+            console.error(
+              "Loading card sets timed out - likely a Firestore permissions issue",
+            );
+            setError(
+              "Unable to load data. Please check Firestore security rules.",
+            );
+            setLoading(false);
+          }, 5000);
+
           await loadCardSets(currentUser.uid);
           clearTimeout(loadTimeout);
           console.log("Card sets loaded, setting loading to false");
         } catch (err) {
-          clearTimeout(loadTimeout);
-          console.error("Error in loadCardSets:", err);
+          console.error("Error in user document check or loadCardSets:", err);
+          setError("Failed to load user data. Please try again.");
         }
       } else {
         console.log("No user, redirecting to login");

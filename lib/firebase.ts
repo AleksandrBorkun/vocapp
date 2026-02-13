@@ -1,6 +1,7 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { Firestore, getFirestore } from 'firebase/firestore';
+import { doc, Firestore, getDoc, getFirestore, setDoc } from 'firebase/firestore';
+import { User } from './types';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -41,3 +42,41 @@ if (typeof window !== 'undefined') {
 }
 
 export { app, auth, db };
+
+/**
+ * Creates a user document in Firestore after first login
+ */
+export async function createUserDocument(
+  userId: string,
+  nativeLanguage: string,
+  name: string
+): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const userRef = doc(db, 'users', userId);
+  const userData: User = {
+    vocabIDs: [],
+    nativeLanguage,
+    name,
+    tier: 'free'
+  };
+
+  await setDoc(userRef, userData);
+}
+
+/**
+ * Gets a user document from Firestore
+ * Returns null if user document doesn't exist
+ */
+export async function getUserDocument(userId: string): Promise<User | null> {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+
+  if (userSnap.exists()) {
+    return userSnap.data() as User;
+  }
+
+  return null;
+}
