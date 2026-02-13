@@ -610,58 +610,6 @@ export default function HomePage() {
               pagination={{ clickable: true }}
               centeredSlides={true}
             >
-              {/* Create New Set Card */}
-              <SwiperSlide>
-                <Button
-                  onClick={() => setShowCreateModal(true)}
-                  sx={{
-                    bgcolor: "white",
-                    p: { xs: 3, sm: 4 },
-                    borderRadius: 2,
-                    boxShadow: 3,
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    textAlign: "center",
-                    height: "80vh",
-                    width: "100%",
-                    border: 2,
-                    borderStyle: "dashed",
-                    borderColor: "grey.300",
-                    "&:hover": {
-                      boxShadow: 6,
-                      borderColor: "primary.main",
-                    },
-                    "&:hover .add-icon": {
-                      transform: "scale(1.1)",
-                    },
-                  }}
-                >
-                  <Box
-                    className="add-icon"
-                    sx={{
-                      fontSize: "3rem",
-                      mb: 2,
-                      transition: "transform 0.2s",
-                    }}
-                  >
-                    ➕
-                  </Box>
-                  <Typography
-                    variant="h6"
-                    fontWeight={600}
-                    color="grey.800"
-                    mb={1}
-                    sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
-                  >
-                    Create New Deck
-                  </Typography>
-                  <Typography variant="body2" color="grey.600">
-                    Build a new vocabulary deck
-                  </Typography>
-                </Button>
-              </SwiperSlide>
-
               {decks.map((deck) => (
                 <SwiperSlide key={deck.id}>
                   <Card
@@ -688,11 +636,14 @@ export default function HomePage() {
                       }}
                     >
                       <Typography
-                        variant="h6"
-                        fontWeight={600}
+                        variant="h4"
+                        fontWeight={700}
                         color="text.primary"
-                        mb={1}
-                        sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                        mb={3}
+                        sx={{
+                          fontSize: { xs: "1.75rem", sm: "2rem" },
+                          textAlign: "center",
+                        }}
                       >
                         {deck.name}
                       </Typography>
@@ -744,6 +695,58 @@ export default function HomePage() {
                   </Card>
                 </SwiperSlide>
               ))}
+
+              {/* Create New Set Card */}
+              <SwiperSlide>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
+                  sx={{
+                    bgcolor: "white",
+                    p: { xs: 3, sm: 4 },
+                    borderRadius: 2,
+                    boxShadow: 3,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    height: "80vh",
+                    width: "100%",
+                    border: 2,
+                    borderStyle: "dashed",
+                    borderColor: "grey.300",
+                    "&:hover": {
+                      boxShadow: 6,
+                      borderColor: "primary.main",
+                    },
+                    "&:hover .add-icon": {
+                      transform: "scale(1.1)",
+                    },
+                  }}
+                >
+                  <Box
+                    className="add-icon"
+                    sx={{
+                      fontSize: "3rem",
+                      mb: 2,
+                      transition: "transform 0.2s",
+                    }}
+                  >
+                    ➕
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    color="grey.800"
+                    mb={1}
+                    sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                  >
+                    Create New Deck
+                  </Typography>
+                  <Typography variant="body2" color="grey.600">
+                    Build a new vocabulary deck
+                  </Typography>
+                </Button>
+              </SwiperSlide>
             </Swiper>
           </Box>
         )}
