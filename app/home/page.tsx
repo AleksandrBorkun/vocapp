@@ -1,10 +1,19 @@
-'use client';
+"use client";
 
-import { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
-import { onAuthStateChanged, signOut, User } from 'firebase/auth';
-import { collection, addDoc, query, where, getDocs, deleteDoc, doc, updateDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import {
+  collection,
+  addDoc,
+  query,
+  where,
+  getDocs,
+  deleteDoc,
+  doc,
+  updateDoc,
+} from "firebase/firestore";
+import { auth, db } from "@/lib/firebase";
 
 interface CardSet {
   id: string;
@@ -23,6 +32,7 @@ interface Card {
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [cardSets, setCardSets] = useState<CardSet[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStudyModal, setShowStudyModal] = useState(false);
@@ -32,53 +42,108 @@ export default function HomePage() {
   const router = useRouter();
 
   // New card set form
-  const [newSetName, setNewSetName] = useState('');
-  const [newSetDescription, setNewSetDescription] = useState('');
-  const [newCards, setNewCards] = useState<Card[]>([{ front: '', back: '' }]);
+  const [newSetName, setNewSetName] = useState("");
+  const [newSetDescription, setNewSetDescription] = useState("");
+  const [newCards, setNewCards] = useState<Card[]>([{ front: "", back: "" }]);
 
   useEffect(() => {
+    console.log("Home page mounted, auth object:", auth);
+
     if (!auth) {
-      router.push('/login');
+      console.error("Auth is not initialized");
+      setError(
+        "Firebase authentication not initialized. Please check your configuration.",
+      );
+      setLoading(false);
       return;
     }
-    
+
+    // Set a timeout to detect if onAuthStateChanged never fires
+    const timeoutId = setTimeout(() => {
+      console.error("Auth state check timed out after 10 seconds");
+      setError(
+        "Authentication timeout. Please refresh the page or check your connection.",
+      );
+      setLoading(false);
+    }, 10000);
+
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log("Auth state changed. User:", currentUser?.email || "No user");
+      clearTimeout(timeoutId);
+
       if (currentUser) {
         setUser(currentUser);
-        await loadCardSets(currentUser.uid);
+        console.log("About to load card sets...");
+
+        // Add timeout for loadCardSets
+        const loadTimeout = setTimeout(() => {
+          console.error(
+            "Loading card sets timed out - likely a Firestore permissions issue",
+          );
+          setError(
+            "Unable to load data. Please check Firestore security rules.",
+          );
+          setLoading(false);
+        }, 5000);
+
+        try {
+          await loadCardSets(currentUser.uid);
+          clearTimeout(loadTimeout);
+          console.log("Card sets loaded, setting loading to false");
+        } catch (err) {
+          clearTimeout(loadTimeout);
+          console.error("Error in loadCardSets:", err);
+        }
       } else {
-        router.push('/login');
+        console.log("No user, redirecting to login");
+        router.push("/login");
       }
+      console.log("Setting loading to false");
       setLoading(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(timeoutId);
+      unsubscribe();
+    };
   }, [router]);
 
   const loadCardSets = async (userId: string) => {
-    if (!db) return;
-    
+    console.log("Loading card sets for user:", userId);
+    console.log("DB object:", db);
+
+    if (!db) {
+      console.error("Firestore DB is not initialized");
+      return;
+    }
+
     try {
-      const q = query(collection(db, 'cardSets'), where('userId', '==', userId));
+      const q = query(
+        collection(db, "cardSets"),
+        where("userId", "==", userId),
+      );
+      console.log("Executing Firestore query...");
       const querySnapshot = await getDocs(q);
+      console.log("Query completed. Documents found:", querySnapshot.size);
       const sets: CardSet[] = [];
       querySnapshot.forEach((doc) => {
         sets.push({ id: doc.id, ...doc.data() } as CardSet);
       });
       setCardSets(sets);
+      console.log("Card sets loaded successfully:", sets.length);
     } catch (error) {
-      console.error('Error loading card sets:', error);
+      console.error("Error loading card sets:", error);
     }
   };
 
   const handleSignOut = async () => {
     if (!auth) return;
-    
+
     try {
       await signOut(auth);
-      router.push('/');
+      router.push("/");
     } catch (error) {
-      console.error('Error signing out:', error);
+      console.error("Error signing out:", error);
     }
   };
 
@@ -87,9 +152,11 @@ export default function HomePage() {
     if (!user || !db) return;
 
     try {
-      const validCards = newCards.filter(card => card.front.trim() && card.back.trim());
-      
-      await addDoc(collection(db, 'cardSets'), {
+      const validCards = newCards.filter(
+        (card) => card.front.trim() && card.back.trim(),
+      );
+
+      await addDoc(collection(db, "cardSets"), {
         name: newSetName,
         description: newSetDescription,
         cards: validCards,
@@ -98,23 +165,24 @@ export default function HomePage() {
       });
 
       setShowCreateModal(false);
-      setNewSetName('');
-      setNewSetDescription('');
-      setNewCards([{ front: '', back: '' }]);
+      setNewSetName("");
+      setNewSetDescription("");
+      setNewCards([{ front: "", back: "" }]);
       await loadCardSets(user.uid);
     } catch (error) {
-      console.error('Error creating card set:', error);
+      console.error("Error creating card set:", error);
     }
   };
 
   const handleDeleteSet = async (setId: string) => {
-    if (!confirm('Are you sure you want to delete this card set?') || !db) return;
-    
+    if (!confirm("Are you sure you want to delete this card set?") || !db)
+      return;
+
     try {
-      await deleteDoc(doc(db, 'cardSets', setId));
+      await deleteDoc(doc(db, "cardSets", setId));
       if (user) await loadCardSets(user.uid);
     } catch (error) {
-      console.error('Error deleting card set:', error);
+      console.error("Error deleting card set:", error);
     }
   };
 
@@ -142,10 +210,14 @@ export default function HomePage() {
   };
 
   const addCardInput = () => {
-    setNewCards([...newCards, { front: '', back: '' }]);
+    setNewCards([...newCards, { front: "", back: "" }]);
   };
 
-  const updateCard = (index: number, field: 'front' | 'back', value: string) => {
+  const updateCard = (
+    index: number,
+    field: "front" | "back",
+    value: string,
+  ) => {
     const updated = [...newCards];
     updated[index][field] = value;
     setNewCards(updated);
@@ -157,10 +229,44 @@ export default function HomePage() {
     }
   };
 
+  console.log(
+    "Render - loading:",
+    loading,
+    "error:",
+    error,
+    "user:",
+    user?.email,
+  );
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-primary-dark">
         <div className="text-primary-pale text-xl">Loading...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-primary-dark p-4">
+        <div className="bg-primary-medium p-8 rounded-lg border border-red-500 max-w-md">
+          <h2 className="text-xl font-bold text-red-400 mb-4">Error</h2>
+          <p className="text-primary-pale mb-6">{error}</p>
+          <div className="flex gap-3">
+            <button
+              onClick={() => window.location.reload()}
+              className="flex-1 px-4 py-2 bg-primary-light text-primary-pale rounded hover:bg-primary-gray transition-colors"
+            >
+              Retry
+            </button>
+            <button
+              onClick={() => router.push("/login")}
+              className="flex-1 px-4 py-2 bg-primary-dark text-primary-pale rounded hover:bg-primary-gray transition-colors"
+            >
+              Back to Login
+            </button>
+          </div>
+        </div>
       </div>
     );
   }
@@ -170,7 +276,9 @@ export default function HomePage() {
       {/* Header */}
       <header className="bg-primary-medium border-b border-primary-gray p-4 sm:p-6">
         <div className="max-w-6xl mx-auto flex justify-between items-center">
-          <h1 className="text-2xl sm:text-3xl font-bold text-primary-pale">VocApp</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold text-primary-pale">
+            VocApp
+          </h1>
           <button
             onClick={handleSignOut}
             className="px-4 py-2 text-primary-pale hover:text-primary-light transition-colors text-sm sm:text-base"
@@ -184,7 +292,9 @@ export default function HomePage() {
       <main className="max-w-6xl mx-auto p-4 sm:p-6">
         <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
           <div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary-pale mb-2">My Card Sets</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold text-primary-pale mb-2">
+              My Card Sets
+            </h2>
             <p className="text-primary-gray">Welcome back, {user?.email}</p>
           </div>
           <button
@@ -198,7 +308,9 @@ export default function HomePage() {
         {/* Card Sets Grid */}
         {cardSets.length === 0 ? (
           <div className="text-center py-12">
-            <p className="text-primary-gray text-lg mb-4">You don't have any card sets yet.</p>
+            <p className="text-primary-gray text-lg mb-4">
+              You don't have any card sets yet.
+            </p>
             <button
               onClick={() => setShowCreateModal(true)}
               className="px-6 py-3 bg-primary-light text-primary-pale font-semibold rounded-lg hover:bg-primary-gray transition-colors"
@@ -213,9 +325,15 @@ export default function HomePage() {
                 key={set.id}
                 className="bg-primary-medium p-4 sm:p-6 rounded-lg border border-primary-gray hover:border-primary-light transition-colors"
               >
-                <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">{set.name}</h3>
-                <p className="text-primary-gray text-sm mb-4">{set.description}</p>
-                <p className="text-primary-pale text-sm mb-4">{set.cards.length} cards</p>
+                <h3 className="text-lg sm:text-xl font-semibold text-primary-pale mb-2">
+                  {set.name}
+                </h3>
+                <p className="text-primary-gray text-sm mb-4">
+                  {set.description}
+                </p>
+                <p className="text-primary-pale text-sm mb-4">
+                  {set.cards.length} cards
+                </p>
                 <div className="flex gap-2">
                   <button
                     onClick={() => startStudying(set)}
@@ -240,10 +358,14 @@ export default function HomePage() {
       {showCreateModal && (
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-primary-medium rounded-lg p-6 sm:p-8 max-w-2xl w-full max-h-[90vh] overflow-y-auto border border-primary-gray">
-            <h2 className="text-2xl font-bold text-primary-pale mb-6">Create New Card Set</h2>
+            <h2 className="text-2xl font-bold text-primary-pale mb-6">
+              Create New Card Set
+            </h2>
             <form onSubmit={handleCreateSet} className="space-y-4">
               <div>
-                <label className="block text-primary-pale mb-2 text-sm font-medium">Set Name</label>
+                <label className="block text-primary-pale mb-2 text-sm font-medium">
+                  Set Name
+                </label>
                 <input
                   type="text"
                   value={newSetName}
@@ -253,7 +375,9 @@ export default function HomePage() {
                 />
               </div>
               <div>
-                <label className="block text-primary-pale mb-2 text-sm font-medium">Description</label>
+                <label className="block text-primary-pale mb-2 text-sm font-medium">
+                  Description
+                </label>
                 <input
                   type="text"
                   value={newSetDescription}
@@ -263,11 +387,18 @@ export default function HomePage() {
               </div>
 
               <div>
-                <label className="block text-primary-pale mb-4 text-sm font-medium">Cards</label>
+                <label className="block text-primary-pale mb-4 text-sm font-medium">
+                  Cards
+                </label>
                 {newCards.map((card, index) => (
-                  <div key={index} className="mb-4 p-4 bg-primary-dark rounded border border-primary-gray">
+                  <div
+                    key={index}
+                    className="mb-4 p-4 bg-primary-dark rounded border border-primary-gray"
+                  >
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-primary-pale text-sm">Card {index + 1}</span>
+                      <span className="text-primary-pale text-sm">
+                        Card {index + 1}
+                      </span>
                       {newCards.length > 1 && (
                         <button
                           type="button"
@@ -282,14 +413,18 @@ export default function HomePage() {
                       type="text"
                       placeholder="Front (e.g., Word)"
                       value={card.front}
-                      onChange={(e) => updateCard(index, 'front', e.target.value)}
+                      onChange={(e) =>
+                        updateCard(index, "front", e.target.value)
+                      }
                       className="w-full px-3 py-2 mb-2 bg-primary-medium border border-primary-gray rounded text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light text-sm"
                     />
                     <input
                       type="text"
                       placeholder="Back (e.g., Definition)"
                       value={card.back}
-                      onChange={(e) => updateCard(index, 'back', e.target.value)}
+                      onChange={(e) =>
+                        updateCard(index, "back", e.target.value)
+                      }
                       className="w-full px-3 py-2 bg-primary-medium border border-primary-gray rounded text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light text-sm"
                     />
                   </div>
@@ -314,9 +449,9 @@ export default function HomePage() {
                   type="button"
                   onClick={() => {
                     setShowCreateModal(false);
-                    setNewSetName('');
-                    setNewSetDescription('');
-                    setNewCards([{ front: '', back: '' }]);
+                    setNewSetName("");
+                    setNewSetDescription("");
+                    setNewCards([{ front: "", back: "" }]);
                   }}
                   className="flex-1 py-3 bg-primary-dark text-primary-pale rounded hover:bg-primary-gray transition-colors"
                 >
@@ -333,7 +468,9 @@ export default function HomePage() {
         <div className="fixed inset-0 bg-black/70 flex items-center justify-center p-4 z-50">
           <div className="bg-primary-medium rounded-lg p-6 sm:p-8 max-w-lg w-full border border-primary-gray">
             <div className="mb-6">
-              <h2 className="text-xl sm:text-2xl font-bold text-primary-pale mb-2">{currentSet.name}</h2>
+              <h2 className="text-xl sm:text-2xl font-bold text-primary-pale mb-2">
+                {currentSet.name}
+              </h2>
               <p className="text-primary-gray text-sm">
                 Card {currentCardIndex + 1} of {currentSet.cards.length}
               </p>
@@ -351,7 +488,7 @@ export default function HomePage() {
             </div>
 
             <p className="text-center text-primary-gray text-sm mb-6">
-              {isFlipped ? 'Click to see front' : 'Click to see back'}
+              {isFlipped ? "Click to see front" : "Click to see back"}
             </p>
 
             <div className="flex gap-3">
@@ -366,7 +503,9 @@ export default function HomePage() {
                 onClick={nextCard}
                 className="flex-1 py-3 bg-primary-light text-primary-pale rounded hover:bg-primary-gray transition-colors"
               >
-                {currentCardIndex === currentSet.cards.length - 1 ? 'Finish' : 'Next'}
+                {currentCardIndex === currentSet.cards.length - 1
+                  ? "Finish"
+                  : "Next"}
               </button>
             </div>
 

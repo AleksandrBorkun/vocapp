@@ -52,8 +52,8 @@ export default function LoginPage() {
       await signInWithPopup(auth, provider);
       router.push("/home");
     } catch (err: any) {
+      console.error("Error initiating Google sign-in:", err);
       setError(err.message || "An error occurred. Please try again.");
-    } finally {
       setLoading(false);
     }
   };
