@@ -13,7 +13,7 @@ A mobile-friendly web application for creating and studying flashcard sets to le
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React, TypeScript
+- **Frontend**: Next.js 16, React, TypeScript
 - **Styling**: TailwindCSS
 - **Authentication & Database**: Firebase (Auth + Firestore)
 - **Color Palette**: #00030D, #0C1526, #58748C, #4F6273, #B8CAD9
