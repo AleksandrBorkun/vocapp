@@ -1,94 +1,119 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import Link from "next/link";
+import {
+  signInWithEmailAndPassword,
+  GoogleAuthProvider,
+  signInWithPopup,
+} from "firebase/auth";
+import { auth } from "@/lib/firebase";
 
 export default function LoginPage() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
 
     if (!auth) {
-      setError('Firebase is not initialized');
+      setError("Firebase is not initialized");
       setLoading(false);
       return;
     }
 
     try {
-      if (isLogin) {
-        await signInWithEmailAndPassword(auth, email, password);
-      } else {
-        await createUserWithEmailAndPassword(auth, email, password);
-      }
-      router.push('/home');
+      await signInWithEmailAndPassword(auth, email, password);
+      router.push("/home");
     } catch (err: any) {
-      setError(err.message || 'An error occurred. Please try again.');
+      setError(err.message || "An error occurred. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen flex flex-col bg-primary-dark">
-      <header className="p-4 sm:p-6">
-        <div className="max-w-6xl mx-auto">
-          <Link href="/" className="text-2xl sm:text-3xl font-bold text-primary-pale hover:text-primary-light transition-colors">
-            VocApp
-          </Link>
-        </div>
-      </header>
+  const handleGoogleSignIn = async () => {
+    if (!auth) {
+      setError("Firebase is not initialized");
+      return;
+    }
 
-      <main className="flex-1 flex items-center justify-center px-4 py-8">
+    setError("");
+    setLoading(true);
+
+    try {
+      const provider = new GoogleAuthProvider();
+      await signInWithPopup(auth, provider);
+      router.push("/home");
+    } catch (err: any) {
+      setError(err.message || "An error occurred. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFacebookSignIn = async () => {
+    // Placeholder for Facebook login - will be implemented later
+    setError("Facebook login coming soon");
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col bg-gray-100">
+      {/* Header with gray background */}
+      <div className="bg-gray-200 h-32"></div>
+
+      <main className="flex-1 flex items-start justify-center px-4 -mt-16">
         <div className="w-full max-w-md">
-          <div className="bg-primary-medium p-6 sm:p-8 rounded-lg border border-primary-gray shadow-xl">
-            <h2 className="text-2xl sm:text-3xl font-bold text-primary-pale mb-6 text-center">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h2>
+          <div className="bg-white p-8 rounded-lg shadow-lg">
+            <h1 className="text-3xl font-bold text-gray-900 mb-8">
+              Welcome to VocApp
+            </h1>
 
             {error && (
-              <div className="mb-4 p-3 bg-red-900/30 border border-red-700 rounded text-red-300 text-sm">
+              <div className="mb-4 p-3 bg-red-50 border border-red-300 rounded text-red-700 text-sm">
                 {error}
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-primary-pale mb-2">
-                  Email
+                <label
+                  htmlFor="email"
+                  className="block text-sm text-gray-700 mb-2"
+                >
+                  email
                 </label>
                 <input
                   type="email"
                   id="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 bg-primary-dark border border-primary-gray rounded-lg text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light transition-colors"
-                  placeholder="your@email.com"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-900 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-light transition-colors"
+                  placeholder="superhero@miro.com"
                   required
                 />
               </div>
 
               <div>
-                <label htmlFor="password" className="block text-sm font-medium text-primary-pale mb-2">
-                  Password
+                <label
+                  htmlFor="password"
+                  className="block text-sm text-gray-700 mb-2"
+                >
+                  password
                 </label>
                 <input
                   type="password"
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 bg-primary-dark border border-primary-gray rounded-lg text-primary-pale placeholder-primary-gray focus:outline-none focus:border-primary-light transition-colors"
-                  placeholder="••••••••"
+                  className="w-full px-4 py-3 bg-white border-2 border-gray-900 rounded text-gray-900 placeholder-gray-400 focus:outline-none focus:border-primary-light transition-colors"
+                  placeholder="your password"
                   required
                   minLength={6}
                 />
@@ -97,22 +122,46 @@ export default function LoginPage() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-3 bg-primary-light text-primary-pale font-semibold rounded-lg hover:bg-primary-gray transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {loading ? 'Please wait...' : (isLogin ? 'Sign In' : 'Sign Up')}
+                {loading ? "Please wait..." : "Login"}
               </button>
             </form>
 
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => {
-                  setIsLogin(!isLogin);
-                  setError('');
-                }}
-                className="text-primary-light hover:text-primary-pale transition-colors text-sm"
+            <div className="mt-4 text-center">
+              <Link
+                href="/forgot-password"
+                className="text-[#5558D9] hover:text-[#4447b8] text-sm font-medium"
               >
-                {isLogin ? "Don't have an account? Sign up" : 'Already have an account? Sign in'}
+                Forgot password?
+              </Link>
+            </div>
+
+            <div className="mt-6 space-y-3">
+              <button
+                onClick={handleGoogleSignIn}
+                disabled={loading}
+                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue with Google
               </button>
+
+              <button
+                onClick={handleFacebookSignIn}
+                disabled={loading}
+                className="w-full py-3.5 bg-[#5558D9] text-white font-semibold rounded hover:bg-[#4447b8] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Continue with FB
+              </button>
+            </div>
+
+            <div className="mt-6 text-center">
+              <Link
+                href="/privacy"
+                className="text-[#5558D9] hover:text-[#4447b8] text-sm font-medium"
+              >
+                Privacy
+              </Link>
             </div>
           </div>
         </div>
