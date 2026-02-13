@@ -91,6 +91,13 @@ export default function HomePage() {
     { word: "", translation: "", example: "", accuracy: 0 },
   ]);
 
+  // Add words to existing deck
+  const [showAddWordsModal, setShowAddWordsModal] = useState(false);
+  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
+  const [wordsToAdd, setWordsToAdd] = useState<Word[]>([
+    { word: "", translation: "", example: "", accuracy: 0 },
+  ]);
+
   useEffect(() => {
     console.log("Home page mounted, auth object:", auth);
 
@@ -276,6 +283,48 @@ export default function HomePage() {
     }
   };
 
+  const handleAddWords = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user || !db || !selectedDeckId) return;
+
+    try {
+      const validWords = wordsToAdd.filter(
+        (word) => word.word.trim() && word.translation.trim(),
+      );
+
+      // Get current deck document
+      const deckRef = doc(db, "decks", selectedDeckId);
+      const deckSnap = await getDoc(deckRef);
+
+      if (deckSnap.exists()) {
+        const currentWords = deckSnap.data().words || [];
+
+        // Update deck with merged words
+        await updateDoc(deckRef, {
+          words: [...currentWords, ...validWords],
+        });
+      }
+
+      // Reset and close modal
+      setShowAddWordsModal(false);
+      setSelectedDeckId(null);
+      setWordsToAdd([{ word: "", translation: "", example: "", accuracy: 0 }]);
+
+      // Reload decks
+      const userDoc = await getUserDocument(user.uid);
+      if (userDoc) {
+        await loadDecks(user.uid, userDoc.vocabIDs);
+      }
+    } catch (error) {
+      console.error("Error adding words:", error);
+    }
+  };
+
+  const openAddWordsModal = (deckId: string) => {
+    setSelectedDeckId(deckId);
+    setShowAddWordsModal(true);
+  };
+
   const startStudying = (deck: Deck) => {
     setCurrentDeck(deck);
     setCurrentCardIndex(0);
@@ -319,6 +368,29 @@ export default function HomePage() {
   const removeWord = (index: number) => {
     if (newWords.length > 1) {
       setNewWords(newWords.filter((_, i) => i !== index));
+    }
+  };
+
+  const addWordToAddInput = () => {
+    setWordsToAdd([
+      ...wordsToAdd,
+      { word: "", translation: "", example: "", accuracy: 0 },
+    ]);
+  };
+
+  const updateWordToAdd = (
+    index: number,
+    field: "word" | "translation" | "example",
+    value: string,
+  ) => {
+    const updated = [...wordsToAdd];
+    updated[index][field] = value;
+    setWordsToAdd(updated);
+  };
+
+  const removeWordToAdd = (index: number) => {
+    if (wordsToAdd.length > 1) {
+      setWordsToAdd(wordsToAdd.filter((_, i) => i !== index));
     }
   };
 
@@ -643,6 +715,14 @@ export default function HomePage() {
                           Study
                         </Button>
                         <Button
+                          onClick={() => openAddWordsModal(deck.id)}
+                          variant="outlined"
+                          size="small"
+                          sx={{ flex: 1 }}
+                        >
+                          Add Words
+                        </Button>
+                        <Button
                           onClick={() => handleDeleteDeck(deck.id)}
                           variant="outlined"
                           size="small"
@@ -859,6 +939,167 @@ export default function HomePage() {
             sx={{ flex: 1 }}
           >
             Create Deck
+          </Button>
+        </DialogActions>
+      </Dialog>
+
+      {/* Add Words Modal */}
+      <Dialog
+        open={showAddWordsModal}
+        onClose={() => {
+          setShowAddWordsModal(false);
+          setSelectedDeckId(null);
+          setWordsToAdd([
+            { word: "", translation: "", example: "", accuracy: 0 },
+          ]);
+        }}
+        maxWidth="md"
+        fullWidth
+        TransitionComponent={SlideTransition}
+        PaperProps={{
+          sx: {
+            bgcolor: "background.paper",
+            borderRadius: 2,
+            border: 1,
+            borderColor: "secondary.main",
+          },
+        }}
+      >
+        <DialogTitle>
+          <Typography variant="h5" fontWeight="bold" color="text.primary">
+            Add Words to Deck
+          </Typography>
+          {selectedDeckId && (
+            <Typography variant="body2" color="secondary.main" mt={1}>
+              {decks.find((d) => d.id === selectedDeckId)?.name}
+            </Typography>
+          )}
+        </DialogTitle>
+        <DialogContent sx={{ maxHeight: "70vh" }}>
+          <Box
+            component="form"
+            id="addWordsForm"
+            onSubmit={handleAddWords}
+            sx={{ mt: 2 }}
+          >
+            <Typography
+              variant="body2"
+              fontWeight={500}
+              color="text.primary"
+              mb={2}
+            >
+              New Words
+            </Typography>
+            {wordsToAdd.map((word, index) => (
+              <Card
+                key={index}
+                sx={{
+                  mb: 2,
+                  p: 2,
+                  bgcolor: "background.default",
+                  border: 1,
+                  borderColor: "secondary.main",
+                }}
+              >
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 1,
+                  }}
+                >
+                  <Typography variant="body2" color="text.primary">
+                    Word {index + 1}
+                  </Typography>
+                  {wordsToAdd.length > 1 && (
+                    <Button
+                      size="small"
+                      color="error"
+                      onClick={() => removeWordToAdd(index)}
+                    >
+                      Remove
+                    </Button>
+                  )}
+                </Box>
+                <TextField
+                  fullWidth
+                  placeholder="Word to study"
+                  value={word.word}
+                  onChange={(e) =>
+                    updateWordToAdd(index, "word", e.target.value)
+                  }
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  placeholder="Translation"
+                  value={word.translation}
+                  onChange={(e) =>
+                    updateWordToAdd(index, "translation", e.target.value)
+                  }
+                  size="small"
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  placeholder="Example sentence (optional)"
+                  value={word.example || ""}
+                  onChange={(e) =>
+                    updateWordToAdd(index, "example", e.target.value)
+                  }
+                  size="small"
+                  multiline
+                  rows={2}
+                />
+              </Card>
+            ))}
+            <Button
+              fullWidth
+              variant="outlined"
+              onClick={addWordToAddInput}
+              sx={{
+                py: 1,
+                border: 2,
+                borderStyle: "dashed",
+                borderColor: "secondary.main",
+                color: "secondary.main",
+                "&:hover": {
+                  borderColor: "primary.main",
+                  color: "primary.main",
+                  borderStyle: "dashed",
+                  border: 2,
+                },
+              }}
+            >
+              + Add Another Word
+            </Button>
+          </Box>
+        </DialogContent>
+        <DialogActions
+          sx={{ p: 3, borderTop: 1, borderColor: "secondary.main" }}
+        >
+          <Button
+            onClick={() => {
+              setShowAddWordsModal(false);
+              setSelectedDeckId(null);
+              setWordsToAdd([
+                { word: "", translation: "", example: "", accuracy: 0 },
+              ]);
+            }}
+            variant="outlined"
+            sx={{ flex: 1 }}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            form="addWordsForm"
+            variant="contained"
+            sx={{ flex: 1 }}
+          >
+            Add Words
           </Button>
         </DialogActions>
       </Dialog>
