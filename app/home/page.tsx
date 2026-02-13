@@ -3,6 +3,10 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { onAuthStateChanged, signOut, User } from "firebase/auth";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination } from "swiper/modules";
+import "swiper/css";
+import "swiper/css/pagination";
 import {
   collection,
   addDoc,
@@ -12,6 +16,9 @@ import {
   deleteDoc,
   doc,
   updateDoc,
+  getDoc,
+  arrayUnion,
+  arrayRemove,
 } from "firebase/firestore";
 import { auth, db, getUserDocument } from "@/lib/firebase";
 import {
@@ -45,36 +52,44 @@ const SlideTransition = forwardRef(function Transition(
   return <Slide direction="down" ref={ref} {...props} />;
 });
 
-interface CardSet {
+interface Deck {
   id: string;
   name: string;
   description: string;
-  cards: Card[];
-  userId: string;
+  study: string; // Language code to study e.g. "DK", "ES"
+  language: string; // Native language code e.g. "EN", "ES"
+  words: Word[];
   createdAt: Date;
 }
 
-interface Card {
-  front: string;
-  back: string;
+interface Word {
+  word: string; // Word to study
+  translation: string;
+  example?: string; // Sentence where word is used
+  picture?: string; // Base64 encoded image
+  accuracy: number; // Number from 0 to 1, shows how often you guess correctly
 }
 
 export default function HomePage() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [cardSets, setCardSets] = useState<CardSet[]>([]);
+  const [decks, setDecks] = useState<Deck[]>([]);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showStudyModal, setShowStudyModal] = useState(false);
-  const [currentSet, setCurrentSet] = useState<CardSet | null>(null);
+  const [currentDeck, setCurrentDeck] = useState<Deck | null>(null);
   const [currentCardIndex, setCurrentCardIndex] = useState(0);
   const [isFlipped, setIsFlipped] = useState(false);
   const router = useRouter();
 
-  // New card set form
-  const [newSetName, setNewSetName] = useState("");
-  const [newSetDescription, setNewSetDescription] = useState("");
-  const [newCards, setNewCards] = useState<Card[]>([{ front: "", back: "" }]);
+  // New deck form
+  const [newDeckName, setNewDeckName] = useState("");
+  const [newDeckDescription, setNewDeckDescription] = useState("");
+  const [studyLanguage, setStudyLanguage] = useState("");
+  const [nativeLanguage, setNativeLanguage] = useState("");
+  const [newWords, setNewWords] = useState<Word[]>([
+    { word: "", translation: "", example: "", accuracy: 0 },
+  ]);
 
   useEffect(() => {
     console.log("Home page mounted, auth object:", auth);
@@ -117,12 +132,12 @@ export default function HomePage() {
             return;
           }
 
-          console.log("User document found, loading card sets...");
+          console.log("User document found, loading decks...");
 
-          // Add timeout for loadCardSets
+          // Add timeout for loadDecks
           const loadTimeout = setTimeout(() => {
             console.error(
-              "Loading card sets timed out - likely a Firestore permissions issue",
+              "Loading decks timed out - likely a Firestore permissions issue",
             );
             setError(
               "Unable to load data. Please check Firestore security rules.",
@@ -130,9 +145,9 @@ export default function HomePage() {
             setLoading(false);
           }, 5000);
 
-          await loadCardSets(currentUser.uid);
+          await loadDecks(currentUser.uid, userDoc.vocabIDs);
           clearTimeout(loadTimeout);
-          console.log("Card sets loaded, setting loading to false");
+          console.log("Decks loaded, setting loading to false");
         } catch (err) {
           console.error("Error in user document check or loadCardSets:", err);
           setError("Failed to load user data. Please try again.");
@@ -151,8 +166,8 @@ export default function HomePage() {
     };
   }, [router]);
 
-  const loadCardSets = async (userId: string) => {
-    console.log("Loading card sets for user:", userId);
+  const loadDecks = async (userId: string, vocabIDs: string[]) => {
+    console.log("Loading decks for user:", userId, "with vocabIDs:", vocabIDs);
     console.log("DB object:", db);
 
     if (!db) {
@@ -161,21 +176,26 @@ export default function HomePage() {
     }
 
     try {
-      const q = query(
-        collection(db, "cardSets"),
-        where("userId", "==", userId),
-      );
-      console.log("Executing Firestore query...");
-      const querySnapshot = await getDocs(q);
-      console.log("Query completed. Documents found:", querySnapshot.size);
-      const sets: CardSet[] = [];
-      querySnapshot.forEach((doc) => {
-        sets.push({ id: doc.id, ...doc.data() } as CardSet);
-      });
-      setCardSets(sets);
-      console.log("Card sets loaded successfully:", sets.length);
+      if (vocabIDs.length === 0) {
+        console.log("No vocabIDs found, setting empty decks array");
+        setDecks([]);
+        return;
+      }
+
+      // Fetch all decks by their IDs
+      const loadedDecks: Deck[] = [];
+      for (const deckId of vocabIDs) {
+        const deckRef = doc(db, "decks", deckId);
+        const deckSnap = await getDoc(deckRef);
+        if (deckSnap.exists()) {
+          loadedDecks.push({ id: deckSnap.id, ...deckSnap.data() } as Deck);
+        }
+      }
+
+      setDecks(loadedDecks);
+      console.log("Decks loaded successfully:", loadedDecks.length);
     } catch (error) {
-      console.error("Error loading card sets:", error);
+      console.error("Error loading decks:", error);
     }
   };
 
@@ -190,54 +210,81 @@ export default function HomePage() {
     }
   };
 
-  const handleCreateSet = async (e: React.FormEvent) => {
+  const handleCreateDeck = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user || !db) return;
 
     try {
-      const validCards = newCards.filter(
-        (card) => card.front.trim() && card.back.trim(),
+      const validWords = newWords.filter(
+        (word) => word.word.trim() && word.translation.trim(),
       );
 
-      await addDoc(collection(db, "cardSets"), {
-        name: newSetName,
-        description: newSetDescription,
-        cards: validCards,
-        userId: user.uid,
+      // Create the deck without userId
+      const deckRef = await addDoc(collection(db, "decks"), {
+        name: newDeckName,
+        description: newDeckDescription,
+        study: studyLanguage.toUpperCase(),
+        language: nativeLanguage.toUpperCase(),
+        words: validWords,
         createdAt: new Date(),
       });
 
+      // Add deck ID to user's vocabIDs array
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        vocabIDs: arrayUnion(deckRef.id),
+      });
+
       setShowCreateModal(false);
-      setNewSetName("");
-      setNewSetDescription("");
-      setNewCards([{ front: "", back: "" }]);
-      await loadCardSets(user.uid);
+      setNewDeckName("");
+      setNewDeckDescription("");
+      setStudyLanguage("");
+      setNativeLanguage("");
+      setNewWords([{ word: "", translation: "", example: "", accuracy: 0 }]);
+
+      // Reload user document to get updated vocabIDs
+      const userDoc = await getUserDocument(user.uid);
+      if (userDoc) {
+        await loadDecks(user.uid, userDoc.vocabIDs);
+      }
     } catch (error) {
-      console.error("Error creating card set:", error);
+      console.error("Error creating deck:", error);
     }
   };
 
-  const handleDeleteSet = async (setId: string) => {
-    if (!confirm("Are you sure you want to delete this card set?") || !db)
+  const handleDeleteDeck = async (deckId: string) => {
+    if (!confirm("Are you sure you want to delete this deck?") || !db || !user)
       return;
 
     try {
-      await deleteDoc(doc(db, "cardSets", setId));
-      if (user) await loadCardSets(user.uid);
+      // Delete the deck document
+      await deleteDoc(doc(db, "decks", deckId));
+
+      // Remove deck ID from user's vocabIDs array
+      const userRef = doc(db, "users", user.uid);
+      await updateDoc(userRef, {
+        vocabIDs: arrayRemove(deckId),
+      });
+
+      // Reload user document to get updated vocabIDs
+      const userDoc = await getUserDocument(user.uid);
+      if (userDoc) {
+        await loadDecks(user.uid, userDoc.vocabIDs);
+      }
     } catch (error) {
-      console.error("Error deleting card set:", error);
+      console.error("Error deleting deck:", error);
     }
   };
 
-  const startStudying = (set: CardSet) => {
-    setCurrentSet(set);
+  const startStudying = (deck: Deck) => {
+    setCurrentDeck(deck);
     setCurrentCardIndex(0);
     setIsFlipped(false);
     setShowStudyModal(true);
   };
 
   const nextCard = () => {
-    if (currentSet && currentCardIndex < currentSet.cards.length - 1) {
+    if (currentDeck && currentCardIndex < currentDeck.words.length - 1) {
       setCurrentCardIndex(currentCardIndex + 1);
       setIsFlipped(false);
     } else {
@@ -252,23 +299,26 @@ export default function HomePage() {
     }
   };
 
-  const addCardInput = () => {
-    setNewCards([...newCards, { front: "", back: "" }]);
+  const addWordInput = () => {
+    setNewWords([
+      ...newWords,
+      { word: "", translation: "", example: "", accuracy: 0 },
+    ]);
   };
 
-  const updateCard = (
+  const updateWord = (
     index: number,
-    field: "front" | "back",
+    field: "word" | "translation" | "example",
     value: string,
   ) => {
-    const updated = [...newCards];
+    const updated = [...newWords];
     updated[index][field] = value;
-    setNewCards(updated);
+    setNewWords(updated);
   };
 
-  const removeCard = (index: number) => {
-    if (newCards.length > 1) {
-      setNewCards(newCards.filter((_, i) => i !== index));
+  const removeWord = (index: number) => {
+    if (newWords.length > 1) {
+      setNewWords(newWords.filter((_, i) => i !== index));
     }
   };
 
@@ -400,15 +450,15 @@ export default function HomePage() {
             mb={1}
             sx={{ fontSize: { xs: "1.5rem", sm: "1.875rem" } }}
           >
-            My Card Sets
+            My Vocabulary Decks
           </Typography>
           <Typography color="secondary.main">
             Welcome back, {user?.email}
           </Typography>
         </Box>
 
-        {/* Card Sets Grid */}
-        {cardSets.length === 0 ? (
+        {/* Vocabulary Decks Grid */}
+        {decks.length === 0 ? (
           <Box sx={{ display: "flex", justifyContent: "center", py: 6, px: 3 }}>
             <Button
               onClick={() => setShowCreateModal(true)}
@@ -450,131 +500,172 @@ export default function HomePage() {
                 mb={1.5}
                 sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
               >
-                Create Your First Set
+                Create Your First Deck
               </Typography>
               <Typography variant="body2" color="grey.600">
-                You don't have any card sets yet. Start building your flashcard
-                collection now!
+                You don't have any vocabulary decks yet. Start building your
+                language learning collection now!
               </Typography>
             </Button>
           </Box>
         ) : (
-          <Grid container spacing={{ xs: 2, sm: 3 }}>
-            {/* Create New Set Card */}
-            <Grid item xs={12} sm={6} lg={4}>
-              <Button
-                onClick={() => setShowCreateModal(true)}
-                sx={{
-                  bgcolor: "white",
-                  p: { xs: 3, sm: 4 },
-                  borderRadius: 2,
-                  boxShadow: 3,
-                  display: "flex",
-                  flexDirection: "column",
-                  alignItems: "center",
-                  textAlign: "center",
-                  height: "80vh",
-                  width: "100%",
-                  border: 2,
-                  borderStyle: "dashed",
-                  borderColor: "grey.300",
-                  "&:hover": {
-                    boxShadow: 6,
-                    borderColor: "primary.main",
-                  },
-                  "&:hover .add-icon": {
-                    transform: "scale(1.1)",
-                  },
-                }}
-              >
-                <Box
-                  className="add-icon"
+          <Box
+            sx={{
+              maxWidth: "600px",
+              mx: "auto",
+              pb: 8,
+              "& .swiper": {
+                pb: 6,
+              },
+              "& .swiper-pagination": {
+                bottom: "0 !important",
+              },
+              "& .swiper-pagination-bullet": {
+                width: "10px",
+                height: "10px",
+                backgroundColor: "#4F6273",
+                opacity: 1,
+              },
+              "& .swiper-pagination-bullet-active": {
+                backgroundColor: "#58748C",
+              },
+            }}
+          >
+            <Swiper
+              modules={[Pagination]}
+              spaceBetween={20}
+              slidesPerView={1}
+              pagination={{ clickable: true }}
+              centeredSlides={true}
+            >
+              {/* Create New Set Card */}
+              <SwiperSlide>
+                <Button
+                  onClick={() => setShowCreateModal(true)}
                   sx={{
-                    fontSize: "3rem",
-                    mb: 2,
-                    transition: "transform 0.2s",
-                  }}
-                >
-                  ➕
-                </Box>
-                <Typography
-                  variant="h6"
-                  fontWeight={600}
-                  color="grey.800"
-                  mb={1}
-                  sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
-                >
-                  Create New Set
-                </Typography>
-                <Typography variant="body2" color="grey.600">
-                  Build a new flashcard collection
-                </Typography>
-              </Button>
-            </Grid>
-
-            {cardSets.map((set) => (
-              <Grid item xs={12} sm={6} lg={4} key={set.id}>
-                <Card
-                  sx={{
-                    bgcolor: "background.paper",
-                    p: { xs: 2, sm: 3 },
+                    bgcolor: "white",
+                    p: { xs: 3, sm: 4 },
                     borderRadius: 2,
-                    border: 1,
-                    borderColor: "secondary.main",
+                    boxShadow: 3,
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textAlign: "center",
+                    height: "80vh",
+                    width: "100%",
+                    border: 2,
+                    borderStyle: "dashed",
+                    borderColor: "grey.300",
                     "&:hover": {
+                      boxShadow: 6,
                       borderColor: "primary.main",
                     },
-                    height: "100%",
+                    "&:hover .add-icon": {
+                      transform: "scale(1.1)",
+                    },
                   }}
                 >
-                  <CardContent sx={{ p: 0 }}>
-                    <Typography
-                      variant="h6"
-                      fontWeight={600}
-                      color="text.primary"
-                      mb={1}
-                      sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                  <Box
+                    className="add-icon"
+                    sx={{
+                      fontSize: "3rem",
+                      mb: 2,
+                      transition: "transform 0.2s",
+                    }}
+                  >
+                    ➕
+                  </Box>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    color="grey.800"
+                    mb={1}
+                    sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
+                  >
+                    Create New Deck
+                  </Typography>
+                  <Typography variant="body2" color="grey.600">
+                    Build a new vocabulary deck
+                  </Typography>
+                </Button>
+              </SwiperSlide>
+
+              {decks.map((deck) => (
+                <SwiperSlide key={deck.id}>
+                  <Card
+                    sx={{
+                      bgcolor: "background.paper",
+                      p: { xs: 2, sm: 3 },
+                      borderRadius: 2,
+                      border: 1,
+                      borderColor: "secondary.main",
+                      "&:hover": {
+                        borderColor: "primary.main",
+                      },
+                      height: "80vh",
+                      display: "flex",
+                      flexDirection: "column",
+                    }}
+                  >
+                    <CardContent
+                      sx={{
+                        p: 0,
+                        flex: 1,
+                        display: "flex",
+                        flexDirection: "column",
+                      }}
                     >
-                      {set.name}
-                    </Typography>
-                    <Typography variant="body2" color="secondary.main" mb={2}>
-                      {set.description}
-                    </Typography>
-                    <Typography variant="body2" color="text.primary" mb={2}>
-                      {set.cards.length} cards
-                    </Typography>
-                    <Box sx={{ display: "flex", gap: 1 }}>
-                      <Button
-                        onClick={() => startStudying(set)}
-                        variant="contained"
-                        size="small"
-                        sx={{ flex: 1 }}
+                      <Typography
+                        variant="h6"
+                        fontWeight={600}
+                        color="text.primary"
+                        mb={1}
+                        sx={{ fontSize: { xs: "1.125rem", sm: "1.25rem" } }}
                       >
-                        Study
-                      </Button>
-                      <Button
-                        onClick={() => handleDeleteSet(set.id)}
-                        variant="outlined"
-                        size="small"
-                        color="error"
-                        sx={{
-                          bgcolor: "error.dark",
-                          color: "error.light",
-                          borderColor: "error.dark",
-                          "&:hover": {
-                            bgcolor: "error.main",
-                            borderColor: "error.main",
-                          },
-                        }}
-                      >
-                        Delete
-                      </Button>
-                    </Box>
-                  </CardContent>
-                </Card>
-              </Grid>
-            ))}
-          </Grid>
+                        {deck.name}
+                      </Typography>
+                      <Typography variant="body2" color="secondary.main" mb={1}>
+                        {deck.description}
+                      </Typography>
+                      <Typography variant="body2" color="text.primary" mb={0.5}>
+                        {deck.study} → {deck.language}
+                      </Typography>
+                      <Typography variant="body2" color="text.primary" mb={2}>
+                        {deck.words.length} words
+                      </Typography>
+                      <Box sx={{ display: "flex", gap: 1, mt: "auto" }}>
+                        <Button
+                          onClick={() => startStudying(deck)}
+                          variant="contained"
+                          size="small"
+                          sx={{ flex: 1 }}
+                        >
+                          Study
+                        </Button>
+                        <Button
+                          onClick={() => handleDeleteDeck(deck.id)}
+                          variant="outlined"
+                          size="small"
+                          color="error"
+                          sx={{
+                            bgcolor: "error.dark",
+                            color: "error.light",
+                            borderColor: "error.dark",
+                            "&:hover": {
+                              bgcolor: "error.main",
+                              borderColor: "error.main",
+                            },
+                          }}
+                        >
+                          Delete
+                        </Button>
+                      </Box>
+                    </CardContent>
+                  </Card>
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </Box>
         )}
       </Container>
 
@@ -583,9 +674,13 @@ export default function HomePage() {
         open={showCreateModal}
         onClose={() => {
           setShowCreateModal(false);
-          setNewSetName("");
-          setNewSetDescription("");
-          setNewCards([{ front: "", back: "" }]);
+          setNewDeckName("");
+          setNewDeckDescription("");
+          setStudyLanguage("");
+          setNativeLanguage("");
+          setNewWords([
+            { word: "", translation: "", example: "", accuracy: 0 },
+          ]);
         }}
         maxWidth="md"
         fullWidth
@@ -601,31 +696,51 @@ export default function HomePage() {
       >
         <DialogTitle>
           <Typography variant="h5" fontWeight="bold" color="text.primary">
-            Create New Card Set
+            Create New Vocabulary Deck
           </Typography>
         </DialogTitle>
         <DialogContent sx={{ maxHeight: "70vh" }}>
           <Box
             component="form"
-            id="createSetForm"
-            onSubmit={handleCreateSet}
+            id="createDeckForm"
+            onSubmit={handleCreateDeck}
             sx={{ mt: 2 }}
           >
             <TextField
               fullWidth
-              label="Set Name"
-              value={newSetName}
-              onChange={(e) => setNewSetName(e.target.value)}
+              label="Deck Name"
+              value={newDeckName}
+              onChange={(e) => setNewDeckName(e.target.value)}
               required
               sx={{ mb: 2 }}
             />
             <TextField
               fullWidth
               label="Description"
-              value={newSetDescription}
-              onChange={(e) => setNewSetDescription(e.target.value)}
-              sx={{ mb: 3 }}
+              value={newDeckDescription}
+              onChange={(e) => setNewDeckDescription(e.target.value)}
+              sx={{ mb: 2 }}
             />
+            <Box sx={{ display: "flex", gap: 2, mb: 3 }}>
+              <TextField
+                fullWidth
+                label="Study Language (e.g., DK)"
+                value={studyLanguage}
+                onChange={(e) => setStudyLanguage(e.target.value)}
+                required
+                placeholder="DK"
+                helperText="Language you want to learn"
+              />
+              <TextField
+                fullWidth
+                label="Native Language (e.g., EN)"
+                value={nativeLanguage}
+                onChange={(e) => setNativeLanguage(e.target.value)}
+                required
+                placeholder="EN"
+                helperText="Your native language"
+              />
+            </Box>
 
             <Typography
               variant="body2"
@@ -633,9 +748,9 @@ export default function HomePage() {
               color="text.primary"
               mb={2}
             >
-              Cards
+              Words
             </Typography>
-            {newCards.map((card, index) => (
+            {newWords.map((word, index) => (
               <Card
                 key={index}
                 sx={{
@@ -655,13 +770,13 @@ export default function HomePage() {
                   }}
                 >
                   <Typography variant="body2" color="text.primary">
-                    Card {index + 1}
+                    Word {index + 1}
                   </Typography>
-                  {newCards.length > 1 && (
+                  {newWords.length > 1 && (
                     <Button
                       size="small"
                       color="error"
-                      onClick={() => removeCard(index)}
+                      onClick={() => removeWord(index)}
                     >
                       Remove
                     </Button>
@@ -669,25 +784,37 @@ export default function HomePage() {
                 </Box>
                 <TextField
                   fullWidth
-                  placeholder="Front (e.g., Word)"
-                  value={card.front}
-                  onChange={(e) => updateCard(index, "front", e.target.value)}
+                  placeholder="Word to study"
+                  value={word.word}
+                  onChange={(e) => updateWord(index, "word", e.target.value)}
                   size="small"
                   sx={{ mb: 1 }}
                 />
                 <TextField
                   fullWidth
-                  placeholder="Back (e.g., Definition)"
-                  value={card.back}
-                  onChange={(e) => updateCard(index, "back", e.target.value)}
+                  placeholder="Translation"
+                  value={word.translation}
+                  onChange={(e) =>
+                    updateWord(index, "translation", e.target.value)
+                  }
                   size="small"
+                  sx={{ mb: 1 }}
+                />
+                <TextField
+                  fullWidth
+                  placeholder="Example sentence (optional)"
+                  value={word.example || ""}
+                  onChange={(e) => updateWord(index, "example", e.target.value)}
+                  size="small"
+                  multiline
+                  rows={2}
                 />
               </Card>
             ))}
             <Button
               fullWidth
               variant="outlined"
-              onClick={addCardInput}
+              onClick={addWordInput}
               sx={{
                 py: 1,
                 border: 2,
@@ -702,7 +829,7 @@ export default function HomePage() {
                 },
               }}
             >
-              + Add Another Card
+              + Add Another Word
             </Button>
           </Box>
         </DialogContent>
@@ -712,9 +839,13 @@ export default function HomePage() {
           <Button
             onClick={() => {
               setShowCreateModal(false);
-              setNewSetName("");
-              setNewSetDescription("");
-              setNewCards([{ front: "", back: "" }]);
+              setNewDeckName("");
+              setNewDeckDescription("");
+              setStudyLanguage("");
+              setNativeLanguage("");
+              setNewWords([
+                { word: "", translation: "", example: "", accuracy: 0 },
+              ]);
             }}
             variant="outlined"
             sx={{ flex: 1 }}
@@ -723,11 +854,11 @@ export default function HomePage() {
           </Button>
           <Button
             type="submit"
-            form="createSetForm"
+            form="createDeckForm"
             variant="contained"
             sx={{ flex: 1 }}
           >
-            Create Set
+            Create Deck
           </Button>
         </DialogActions>
       </Dialog>
@@ -753,7 +884,7 @@ export default function HomePage() {
           },
         }}
       >
-        {currentSet && (
+        {currentDeck && (
           <>
             <DialogTitle>
               <Typography
@@ -762,14 +893,16 @@ export default function HomePage() {
                 color="text.primary"
                 mb={1}
               >
-                {currentSet.name}
+                {currentDeck.name}
               </Typography>
               <Typography variant="body2" color="secondary.main">
-                Card {currentCardIndex + 1} of {currentSet.cards.length}
+                Word {currentCardIndex + 1} of {currentDeck.words.length}
               </Typography>
               <LinearProgress
                 variant="determinate"
-                value={((currentCardIndex + 1) / currentSet.cards.length) * 100}
+                value={
+                  ((currentCardIndex + 1) / currentDeck.words.length) * 100
+                }
                 sx={{ mt: 1 }}
               />
             </DialogTitle>
@@ -788,6 +921,7 @@ export default function HomePage() {
                   cursor: "pointer",
                   minHeight: 200,
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
                   mb: 3,
@@ -797,12 +931,22 @@ export default function HomePage() {
                   variant="h5"
                   color="text.primary"
                   textAlign="center"
-                  sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
+                  sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" }, mb: 2 }}
                 >
                   {isFlipped
-                    ? currentSet.cards[currentCardIndex].back
-                    : currentSet.cards[currentCardIndex].front}
+                    ? currentDeck.words[currentCardIndex].translation
+                    : currentDeck.words[currentCardIndex].word}
                 </Typography>
+                {isFlipped && currentDeck.words[currentCardIndex].example && (
+                  <Typography
+                    variant="body2"
+                    color="secondary.main"
+                    textAlign="center"
+                    sx={{ fontStyle: "italic", mt: 2 }}
+                  >
+                    "{currentDeck.words[currentCardIndex].example}"
+                  </Typography>
+                )}
               </Card>
 
               <Typography
@@ -811,7 +955,7 @@ export default function HomePage() {
                 textAlign="center"
                 mb={3}
               >
-                {isFlipped ? "Click to see front" : "Click to see back"}
+                {isFlipped ? "Click to see word" : "Click to see translation"}
               </Typography>
 
               <Box sx={{ display: "flex", gap: 1.5, mb: 1.5 }}>
@@ -828,7 +972,7 @@ export default function HomePage() {
                   variant="contained"
                   sx={{ flex: 1, py: 1.5 }}
                 >
-                  {currentCardIndex === currentSet.cards.length - 1
+                  {currentCardIndex === currentDeck.words.length - 1
                     ? "Finish"
                     : "Next"}
                 </Button>
