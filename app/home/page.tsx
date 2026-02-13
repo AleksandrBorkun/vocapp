@@ -290,36 +290,52 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-6xl mx-auto p-4 sm:p-6">
-        <div className="mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div>
+        <div className="mb-6">
+          <div className="mb-4">
             <h2 className="text-2xl sm:text-3xl font-bold text-primary-pale mb-2">
               My Card Sets
             </h2>
             <p className="text-primary-gray">Welcome back, {user?.email}</p>
           </div>
-          <button
-            onClick={() => setShowCreateModal(true)}
-            className="w-full sm:w-auto px-6 py-3 bg-primary-light text-primary-pale font-semibold rounded-lg hover:bg-primary-gray transition-colors"
-          >
-            + Create New Set
-          </button>
         </div>
 
         {/* Card Sets Grid */}
         {cardSets.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-primary-gray text-lg mb-4">
-              You don't have any card sets yet.
-            </p>
+          <div className="flex justify-center py-12 px-6">
             <button
               onClick={() => setShowCreateModal(true)}
-              className="px-6 py-3 bg-primary-light text-primary-pale font-semibold rounded-lg hover:bg-primary-gray transition-colors"
+              className="bg-white p-8 sm:p-10 rounded-lg shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group h-[80vh] w-[calc(100%-3rem)] max-w-xl border-2 border-dashed border-gray-300 hover:border-primary-light"
             >
-              Create Your First Set
+              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
+                ➕
+              </div>
+              <h3 className="text-xl sm:text-2xl font-semibold text-gray-800 mb-3">
+                Create Your First Set
+              </h3>
+              <p className="text-gray-600 text-sm">
+                You don't have any card sets yet. Start building your flashcard
+                collection now!
+              </p>
             </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
+            {/* Create New Set Card */}
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-white p-6 sm:p-8 mx-4 sm:mx-2 rounded-lg shadow-lg hover:shadow-xl transition-all flex flex-col items-center justify-center text-center group h-[80vh] border-2 border-dashed border-gray-300 hover:border-primary-light"
+            >
+              <div className="text-5xl mb-4 group-hover:scale-110 transition-transform">
+                ➕
+              </div>
+              <h3 className="text-lg sm:text-xl font-semibold text-gray-800 mb-2">
+                Create New Set
+              </h3>
+              <p className="text-gray-600 text-sm">
+                Build a new flashcard collection
+              </p>
+            </button>
+
             {cardSets.map((set) => (
               <div
                 key={set.id}
