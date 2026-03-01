@@ -28,12 +28,14 @@ A mobile-friendly web application for creating and studying flashcard sets to le
 ### Setup
 
 1. Clone the repository:
+
 ```bash
 git clone https://github.com/AleksandrBorkun/vocapp.git
 cd vocapp
 ```
 
 2. Install dependencies:
+
 ```bash
 npm install
 ```
@@ -43,11 +45,13 @@ npm install
 4. Enable Firebase Authentication (Email/Password) and Firestore Database
 
 5. Copy `.env.example` to `.env.local` and add your Firebase configuration:
+
 ```bash
 cp .env.example .env.local
 ```
 
 6. Update `.env.local` with your Firebase credentials:
+
 ```
 NEXT_PUBLIC_FIREBASE_API_KEY=your_api_key
 NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN=your_auth_domain
@@ -55,9 +59,21 @@ NEXT_PUBLIC_FIREBASE_PROJECT_ID=your_project_id
 NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET=your_storage_bucket
 NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_messaging_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
+
+# Optional: For automatic translation feature
+DEEPL_API_KEY=your_deepl_api_key
+
+# Optional: For automatic word images (Pixabay)
+PIXABAY_API_KEY=your_pixabay_api_key
 ```
 
+**Note**:
+
+- `DEEPL_API_KEY` is required for the automatic translation feature. Get a free API key at [https://www.deepl.com/pro-api](https://www.deepl.com/pro-api)
+- `PIXABAY_API_KEY` is required for automatic word images. Get a free API key at [https://pixabay.com/api/docs/](https://pixabay.com/api/docs/)
+
 7. Run the development server:
+
 ```bash
 npm run dev
 ```

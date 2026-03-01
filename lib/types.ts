@@ -19,6 +19,6 @@ export interface Word {
     word: string; // Word to study
     translation: string;
     example?: string; // Sentence where word is used
-    picture?: string; // Base64 encoded image
+    picture?: string; // Image URL from Pixabay
     accuracy: number; // Number from 0 to 1, shows how often you guess correctly
 }
