@@ -1,6 +1,5 @@
 import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
-import sharp from "sharp";
 
 // Language code mapping from app codes to Pixabay ISO 639-1 codes
 const pixabayLanguageMap: Record<string, string> = {
@@ -158,39 +157,11 @@ export async function POST(request: NextRequest) {
             );
         }
 
-        // Convert image URL to base64
-        try {
-            const imageResponse = await fetch(imageUrl);
-            if (!imageResponse.ok) {
-                throw new Error("Failed to fetch image");
-            }
-
-            const arrayBuffer = await imageResponse.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
-
-            // Compress and resize image using sharp
-            const compressedBuffer = await sharp(buffer)
-                .resize({ width: 800, withoutEnlargement: true })
-                .jpeg({ quality: 50 })
-                .toBuffer();
-
-            const base64 = compressedBuffer.toString("base64");
-            const base64Image = `data:image/jpeg;base64,${base64}`;
-
-            return NextResponse.json({
-                imageUrl: base64Image,
-                message: "Image found and encoded",
-            });
-        } catch (error) {
-            console.error("Error converting image to base64:", error);
-            return NextResponse.json(
-                {
-                    imageUrl: null,
-                    message: "Image found but failed to encode",
-                },
-                { status: 200 }
-            );
-        }
+        // Return the image URL directly
+        return NextResponse.json({
+            imageUrl: imageUrl,
+            message: "Image found",
+        });
     } catch (error) {
         console.error("Pixabay API route error:", error);
         return NextResponse.json(
