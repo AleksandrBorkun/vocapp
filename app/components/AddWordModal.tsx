@@ -251,6 +251,38 @@ export default function AddWordModal({
             multiline
             rows={3}
           />
+          {picture && (
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                gap: 1,
+                p: 2,
+                border: 1,
+                borderColor: "secondary.main",
+                borderRadius: 1,
+                bgcolor: "background.default",
+              }}
+            >
+              <Typography variant="body2" color="text.secondary">
+                Image Preview
+              </Typography>
+              <Box
+                component="img"
+                src={picture}
+                alt={word}
+                sx={{
+                  width: 120,
+                  height: 120,
+                  objectFit: "cover",
+                  borderRadius: 1,
+                  border: 1,
+                  borderColor: "secondary.main",
+                }}
+              />
+            </Box>
+          )}
         </Box>
       </DialogContent>
       <DialogActions sx={{ p: 2.5 }}>
