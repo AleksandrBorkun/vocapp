@@ -16,12 +16,8 @@ import {
   CardContent,
   Switch,
   FormControlLabel,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-  TextField,
 } from "@mui/material";
+import AddWordModal from "@/app/components/AddWordModal";
 
 interface Word {
   word: string;
@@ -53,9 +49,6 @@ export default function DeckPage() {
     [key: number]: boolean;
   }>({});
   const [showAddWordModal, setShowAddWordModal] = useState(false);
-  const [newWord, setNewWord] = useState("");
-  const [newTranslation, setNewTranslation] = useState("");
-  const [newExample, setNewExample] = useState("");
 
   useEffect(() => {
     if (!auth) return;
@@ -108,39 +101,33 @@ export default function DeckPage() {
     setShowAddWordModal(true);
   };
 
-  const handleSaveWord = async () => {
-    if (!newWord || !newTranslation || !deck || !db) return;
+  const handleSaveWord = async (
+    word: string,
+    translation: string,
+    example: string,
+  ) => {
+    if (!deck || !db) return;
 
-    try {
-      const deckRef = doc(db, "decks", deckId);
-      const updatedWords = [
-        ...deck.words,
-        {
-          word: newWord,
-          translation: newTranslation,
-          example: newExample,
-          accuracy: 0,
-        },
-      ];
+    const deckRef = doc(db, "decks", deckId);
+    const updatedWords = [
+      ...deck.words,
+      {
+        word,
+        translation,
+        example,
+        accuracy: 0,
+      },
+    ];
 
-      await updateDoc(deckRef, {
-        words: updatedWords,
-      });
+    await updateDoc(deckRef, {
+      words: updatedWords,
+    });
 
-      // Update local state
-      setDeck({
-        ...deck,
-        words: updatedWords,
-      });
-
-      // Reset form
-      setNewWord("");
-      setNewTranslation("");
-      setNewExample("");
-      setShowAddWordModal(false);
-    } catch (error) {
-      console.error("Error adding word:", error);
-    }
+    // Update local state
+    setDeck({
+      ...deck,
+      words: updatedWords,
+    });
   };
 
   if (loading) {
@@ -421,69 +408,11 @@ export default function DeckPage() {
       </Container>
 
       {/* Add Word Modal */}
-      <Dialog
+      <AddWordModal
         open={showAddWordModal}
         onClose={() => setShowAddWordModal(false)}
-        maxWidth="sm"
-        fullWidth
-        PaperProps={{
-          sx: {
-            bgcolor: "background.paper",
-            borderRadius: 2,
-            border: 1,
-            borderColor: "secondary.main",
-          },
-        }}
-      >
-        <DialogTitle>
-          <Typography variant="h5" fontWeight="bold" color="text.primary">
-            Add New Word
-          </Typography>
-        </DialogTitle>
-        <DialogContent>
-          <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
-            <TextField
-              fullWidth
-              label="Word"
-              value={newWord}
-              onChange={(e) => setNewWord(e.target.value)}
-              required
-            />
-            <TextField
-              fullWidth
-              label="Translation"
-              value={newTranslation}
-              onChange={(e) => setNewTranslation(e.target.value)}
-              required
-            />
-            <TextField
-              fullWidth
-              label="Example (optional)"
-              value={newExample}
-              onChange={(e) => setNewExample(e.target.value)}
-              multiline
-              rows={3}
-            />
-          </Box>
-        </DialogContent>
-        <DialogActions sx={{ p: 2.5 }}>
-          <Button
-            onClick={() => setShowAddWordModal(false)}
-            variant="outlined"
-            sx={{ flex: 1 }}
-          >
-            Cancel
-          </Button>
-          <Button
-            onClick={handleSaveWord}
-            variant="contained"
-            disabled={!newWord || !newTranslation}
-            sx={{ flex: 1 }}
-          >
-            Add Word
-          </Button>
-        </DialogActions>
-      </Dialog>
+        onSave={handleSaveWord}
+      />
     </Box>
   );
 }
