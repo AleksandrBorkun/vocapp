@@ -105,6 +105,7 @@ export default function DeckPage() {
     word: string,
     translation: string,
     example: string,
+    picture?: string,
   ) => {
     if (!deck || !db) return;
 
@@ -115,6 +116,7 @@ export default function DeckPage() {
         word,
         translation,
         example,
+        picture,
         accuracy: 0,
       },
     ];

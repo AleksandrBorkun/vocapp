@@ -20,7 +20,12 @@ import TranslateIcon from "@mui/icons-material/Translate";
 interface AddWordModalProps {
   open: boolean;
   onClose: () => void;
-  onSave: (word: string, translation: string, example: string) => Promise<void>;
+  onSave: (
+    word: string,
+    translation: string,
+    example: string,
+    picture?: string,
+  ) => Promise<void>;
   sourceLang?: string;
   targetLang?: string;
 }
@@ -35,16 +40,70 @@ export default function AddWordModal({
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
   const [example, setExample] = useState("");
+  const [picture, setPicture] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isTranslating, setIsTranslating] = useState(false);
+  const [loadingImage, setLoadingImage] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
+  const [imageWarning, setImageWarning] = useState<string | null>(null);
 
   const handleClose = () => {
     setWord("");
     setTranslation("");
     setExample("");
+    setPicture(null);
     setTranslationError(null);
+    setImageWarning(null);
     onClose();
+  };
+
+  const fetchImage = async (searchWord: string, language: string) => {
+    if (!searchWord.trim() || !language) return;
+
+    setLoadingImage(true);
+    setImageWarning(null);
+
+    try {
+      const response = await fetch("/api/pixabay", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          word: searchWord.trim(),
+          lang: language,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setImageWarning(
+          data.error ||
+            "Failed to fetch image. You can still save without a picture.",
+        );
+        setPicture(null);
+        return;
+      }
+
+      if (data.imageUrl) {
+        setPicture(data.imageUrl);
+        setImageWarning(null);
+      } else {
+        setImageWarning(
+          "No image found for this word. You can still save without a picture.",
+        );
+        setPicture(null);
+      }
+    } catch (error) {
+      console.error("Image fetch error:", error);
+      setImageWarning(
+        "Failed to fetch image. You can still save without a picture.",
+      );
+      setPicture(null);
+    } finally {
+      setLoadingImage(false);
+    }
   };
 
   const handleTranslate = async () => {
@@ -82,6 +141,10 @@ export default function AddWordModal({
 
       if (data.translatedText) {
         setTranslation(data.translatedText);
+        // Automatically fetch image after successful translation
+        if (sourceLang) {
+          await fetchImage(word.trim(), sourceLang);
+        }
       } else {
         setTranslationError("No translation returned");
       }
@@ -98,10 +161,12 @@ export default function AddWordModal({
 
     setIsSubmitting(true);
     try {
-      await onSave(word, translation, example);
+      await onSave(word, translation, example, picture || undefined);
       setWord("");
       setTranslation("");
       setExample("");
+      setPicture(null);
+      setImageWarning(null);
       onClose();
     } catch (error) {
       console.error("Error saving word:", error);
@@ -136,6 +201,15 @@ export default function AddWordModal({
             <Alert severity="error" onClose={() => setTranslationError(null)}>
               {translationError}
             </Alert>
+          )}
+          {imageWarning && <Alert severity="warning">{imageWarning}</Alert>}
+          {loadingImage && (
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+              <CircularProgress size={16} />
+              <Typography variant="body2" color="text.secondary">
+                Fetching image...
+              </Typography>
+            </Box>
           )}
           <TextField
             fullWidth
