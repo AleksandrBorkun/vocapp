@@ -640,9 +640,14 @@ export default function HomePage() {
                         fontWeight={700}
                         color="text.primary"
                         mb={3}
+                        onClick={() => router.push(`/deck/${deck.id}`)}
                         sx={{
                           fontSize: { xs: "1.75rem", sm: "2rem" },
                           textAlign: "center",
+                          cursor: "pointer",
+                          "&:hover": {
+                            color: "primary.main",
+                          },
                         }}
                       >
                         {deck.name}
