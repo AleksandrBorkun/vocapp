@@ -281,7 +281,11 @@ export default function HomePage() {
     }
   };
 
-  const handleAddWord = async (word: string, translation: string, example: string) => {
+  const handleAddWord = async (
+    word: string,
+    translation: string,
+    example: string,
+  ) => {
     if (!user || !db || !selectedDeckId) return;
 
     try {
@@ -370,8 +374,6 @@ export default function HomePage() {
       setNewWords(newWords.filter((_, i) => i !== index));
     }
   };
-
-
 
   console.log(
     "Render - loading:",
