@@ -412,6 +412,8 @@ export default function DeckPage() {
         open={showAddWordModal}
         onClose={() => setShowAddWordModal(false)}
         onSave={handleSaveWord}
+        sourceLang={deck?.study}
+        targetLang={deck?.language}
       />
     </Box>
   );

@@ -10,29 +10,87 @@ import {
   Button,
   Typography,
   Box,
+  IconButton,
+  CircularProgress,
+  Alert,
+  InputAdornment,
 } from "@mui/material";
+import TranslateIcon from "@mui/icons-material/Translate";
 
 interface AddWordModalProps {
   open: boolean;
   onClose: () => void;
   onSave: (word: string, translation: string, example: string) => Promise<void>;
+  sourceLang?: string;
+  targetLang?: string;
 }
 
 export default function AddWordModal({
   open,
   onClose,
   onSave,
+  sourceLang,
+  targetLang,
 }: AddWordModalProps) {
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
   const [example, setExample] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isTranslating, setIsTranslating] = useState(false);
+  const [translationError, setTranslationError] = useState<string | null>(null);
 
   const handleClose = () => {
     setWord("");
     setTranslation("");
     setExample("");
+    setTranslationError(null);
     onClose();
+  };
+
+  const handleTranslate = async () => {
+    if (!word.trim()) return;
+
+    if (!targetLang) {
+      setTranslationError(
+        "Translation not available: language information missing",
+      );
+      return;
+    }
+
+    setIsTranslating(true);
+    setTranslationError(null);
+
+    try {
+      const response = await fetch("/api/translate", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: word.trim(),
+          sourceLang: sourceLang,
+          targetLang: targetLang,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setTranslationError(data.error || "Translation failed");
+        return;
+      }
+
+      if (data.translatedText) {
+        setTranslation(data.translatedText);
+      } else {
+        setTranslationError("No translation returned");
+      }
+    } catch (error) {
+      console.error("Translation error:", error);
+      setTranslationError("Failed to translate. Please try again.");
+    } finally {
+      setIsTranslating(false);
+    }
   };
 
   const handleSubmit = async () => {
@@ -74,12 +132,35 @@ export default function AddWordModal({
       </DialogTitle>
       <DialogContent>
         <Box sx={{ mt: 2, display: "flex", flexDirection: "column", gap: 2 }}>
+          {translationError && (
+            <Alert severity="error" onClose={() => setTranslationError(null)}>
+              {translationError}
+            </Alert>
+          )}
           <TextField
             fullWidth
             label="Word"
             value={word}
             onChange={(e) => setWord(e.target.value)}
             required
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton
+                    onClick={handleTranslate}
+                    disabled={!word.trim() || isTranslating || !targetLang}
+                    edge="end"
+                    title="Translate"
+                  >
+                    {isTranslating ? (
+                      <CircularProgress size={24} />
+                    ) : (
+                      <TranslateIcon />
+                    )}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           <TextField
             fullWidth

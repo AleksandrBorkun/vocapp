@@ -94,7 +94,7 @@ export default function HomePage() {
 
   // Add words to existing deck
   const [showAddWordsModal, setShowAddWordsModal] = useState(false);
-  const [selectedDeckId, setSelectedDeckId] = useState<string | null>(null);
+  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
 
   useEffect(() => {
     console.log("Home page mounted, auth object:", auth);
@@ -286,7 +286,7 @@ export default function HomePage() {
     translation: string,
     example: string,
   ) => {
-    if (!user || !db || !selectedDeckId) return;
+    if (!user || !db || !selectedDeck) return;
 
     try {
       const newWord: Word = {
@@ -297,7 +297,7 @@ export default function HomePage() {
       };
 
       // Get current deck document
-      const deckRef = doc(db, "decks", selectedDeckId);
+      const deckRef = doc(db, "decks", selectedDeck.id);
       const deckSnap = await getDoc(deckRef);
 
       if (deckSnap.exists()) {
@@ -311,7 +311,7 @@ export default function HomePage() {
 
       // Reset and close modal
       setShowAddWordsModal(false);
-      setSelectedDeckId(null);
+      setSelectedDeck(null);
 
       // Reload decks
       const userDoc = await getUserDocument(user.uid);
@@ -325,8 +325,11 @@ export default function HomePage() {
   };
 
   const openAddWordsModal = (deckId: string) => {
-    setSelectedDeckId(deckId);
-    setShowAddWordsModal(true);
+    const deck = decks.find((d) => d.id === deckId);
+    if (deck) {
+      setSelectedDeck(deck);
+      setShowAddWordsModal(true);
+    }
   };
 
   const startStudying = (deck: Deck) => {
@@ -937,9 +940,11 @@ export default function HomePage() {
         open={showAddWordsModal}
         onClose={() => {
           setShowAddWordsModal(false);
-          setSelectedDeckId(null);
+          setSelectedDeck(null);
         }}
         onSave={handleAddWord}
+        sourceLang={selectedDeck?.study}
+        targetLang={selectedDeck?.language}
       />
 
       {/* Study Modal */}
