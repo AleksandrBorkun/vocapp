@@ -1,5 +1,6 @@
 import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
+import sharp from "sharp";
 
 // Language code mapping from app codes to Pixabay ISO 639-1 codes
 const pixabayLanguageMap: Record<string, string> = {
@@ -166,10 +167,15 @@ export async function POST(request: NextRequest) {
 
             const arrayBuffer = await imageResponse.arrayBuffer();
             const buffer = Buffer.from(arrayBuffer);
-            const base64 = buffer.toString("base64");
-            const contentType =
-                imageResponse.headers.get("content-type") || "image/jpeg";
-            const base64Image = `data:${contentType};base64,${base64}`;
+
+            // Compress and resize image using sharp
+            const compressedBuffer = await sharp(buffer)
+                .resize({ width: 800, withoutEnlargement: true })
+                .jpeg({ quality: 50 })
+                .toBuffer();
+
+            const base64 = compressedBuffer.toString("base64");
+            const base64Image = `data:image/jpeg;base64,${base64}`;
 
             return NextResponse.json({
                 imageUrl: base64Image,
