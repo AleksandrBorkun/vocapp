@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogTitle,
@@ -25,9 +25,18 @@ interface AddWordModalProps {
     translation: string,
     example: string,
     picture?: string,
+    index?: number,
   ) => Promise<void>;
   sourceLang?: string;
   targetLang?: string;
+  editMode?: boolean;
+  initialWord?: {
+    word: string;
+    translation: string;
+    example?: string;
+    picture?: string;
+  };
+  wordIndex?: number;
 }
 
 export default function AddWordModal({
@@ -36,6 +45,9 @@ export default function AddWordModal({
   onSave,
   sourceLang,
   targetLang,
+  editMode = false,
+  initialWord,
+  wordIndex,
 }: AddWordModalProps) {
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
@@ -46,6 +58,20 @@ export default function AddWordModal({
   const [loadingImage, setLoadingImage] = useState(false);
   const [translationError, setTranslationError] = useState<string | null>(null);
   const [imageWarning, setImageWarning] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (open && editMode && initialWord) {
+      setWord(initialWord.word);
+      setTranslation(initialWord.translation);
+      setExample(initialWord.example || "");
+      setPicture(initialWord.picture || null);
+    } else if (open && !editMode) {
+      setWord("");
+      setTranslation("");
+      setExample("");
+      setPicture(null);
+    }
+  }, [open, editMode, initialWord]);
 
   const handleClose = () => {
     setWord("");
@@ -161,7 +187,13 @@ export default function AddWordModal({
 
     setIsSubmitting(true);
     try {
-      await onSave(word, translation, example, picture || undefined);
+      await onSave(
+        word,
+        translation,
+        example,
+        picture || undefined,
+        editMode ? wordIndex : undefined,
+      );
       setWord("");
       setTranslation("");
       setExample("");
@@ -192,7 +224,7 @@ export default function AddWordModal({
     >
       <DialogTitle>
         <Typography variant="h5" fontWeight="bold" color="text.primary">
-          Add New Word
+          {editMode ? "Edit Word" : "Add New Word"}
         </Typography>
       </DialogTitle>
       <DialogContent>
@@ -300,7 +332,13 @@ export default function AddWordModal({
           disabled={!word || !translation || isSubmitting}
           sx={{ flex: 1 }}
         >
-          {isSubmitting ? "Adding..." : "Add Word"}
+          {isSubmitting
+            ? editMode
+              ? "Updating..."
+              : "Adding..."
+            : editMode
+              ? "Update"
+              : "Add Word"}
         </Button>
       </DialogActions>
     </Dialog>

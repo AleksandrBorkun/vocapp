@@ -17,6 +17,7 @@ import {
   Switch,
   FormControlLabel,
 } from "@mui/material";
+import EditIcon from "@mui/icons-material/Edit";
 import AddWordModal from "@/app/components/AddWordModal";
 
 interface Word {
@@ -49,6 +50,8 @@ export default function DeckPage() {
     [key: number]: boolean;
   }>({});
   const [showAddWordModal, setShowAddWordModal] = useState(false);
+  const [editingWordIndex, setEditingWordIndex] = useState<number | null>(null);
+  const [editingWord, setEditingWord] = useState<Word | null>(null);
 
   useEffect(() => {
     if (!auth) return;
@@ -101,25 +104,53 @@ export default function DeckPage() {
     setShowAddWordModal(true);
   };
 
+  const handleEditWord = (index: number, word: Word) => {
+    setEditingWordIndex(index);
+    setEditingWord(word);
+    setShowAddWordModal(true);
+  };
+
+  const handleCloseModal = () => {
+    setEditingWordIndex(null);
+    setEditingWord(null);
+    setShowAddWordModal(false);
+  };
+
   const handleSaveWord = async (
     word: string,
     translation: string,
     example: string,
     picture?: string,
+    index?: number,
   ) => {
     if (!deck || !db) return;
 
     const deckRef = doc(db, "decks", deckId);
-    const updatedWords = [
-      ...deck.words,
-      {
+    let updatedWords: Word[];
+
+    if (index !== undefined && index !== null) {
+      // Edit existing word
+      updatedWords = [...deck.words];
+      updatedWords[index] = {
+        ...updatedWords[index],
         word,
         translation,
         example,
         picture,
-        accuracy: 0,
-      },
-    ];
+      };
+    } else {
+      // Add new word
+      updatedWords = [
+        ...deck.words,
+        {
+          word,
+          translation,
+          example,
+          picture,
+          accuracy: 0,
+        },
+      ];
+    }
 
     await updateDoc(deckRef, {
       words: updatedWords,
@@ -353,14 +384,38 @@ export default function DeckPage() {
                 )}
               </Box>
               <Box sx={{ flex: 1, textAlign: "left" }}>
-                <Typography
-                  variant="h6"
-                  fontWeight={600}
-                  color="text.primary"
-                  mb={0.5}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    mb: 0.5,
+                  }}
                 >
-                  {word.word}
-                </Typography>
+                  <Typography
+                    variant="h6"
+                    fontWeight={600}
+                    color="text.primary"
+                  >
+                    {word.word}
+                  </Typography>
+                  <IconButton
+                    size="small"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEditWord(index, word);
+                    }}
+                    sx={{
+                      color: "text.secondary",
+                      "&:hover": {
+                        color: "primary.main",
+                        bgcolor: "rgba(184, 202, 217, 0.1)",
+                      },
+                    }}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                </Box>
                 <Box
                   sx={{
                     display: "flex",
@@ -412,10 +467,13 @@ export default function DeckPage() {
       {/* Add Word Modal */}
       <AddWordModal
         open={showAddWordModal}
-        onClose={() => setShowAddWordModal(false)}
+        onClose={handleCloseModal}
         onSave={handleSaveWord}
         sourceLang={deck?.study}
         targetLang={deck?.language}
+        editMode={editingWordIndex !== null}
+        initialWord={editingWord || undefined}
+        wordIndex={editingWordIndex ?? undefined}
       />
     </Box>
   );
