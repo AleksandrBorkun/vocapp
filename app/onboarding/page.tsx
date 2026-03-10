@@ -1,9 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { auth, createUserDocument } from "@/lib/firebase";
+import { createUserDocument } from "@/lib/firebase";
+import { LANGUAGES } from "@/lib/constants/languages";
+import FullPageLoading from "@/app/components/common/FullPageLoading";
+import { useAuth } from "@/app/hooks/useAuth";
 import {
   Box,
   Container,
@@ -15,66 +17,20 @@ import {
   Button,
   Paper,
   Alert,
-  CircularProgress,
 } from "@mui/material";
 
-const LANGUAGES = [
-  { code: "en", name: "English" },
-  { code: "es", name: "Spanish" },
-  { code: "fr", name: "French" },
-  { code: "de", name: "German" },
-  { code: "it", name: "Italian" },
-  { code: "pt", name: "Portuguese" },
-  { code: "ru", name: "Russian" },
-  { code: "zh", name: "Chinese" },
-  { code: "ja", name: "Japanese" },
-  { code: "ko", name: "Korean" },
-  { code: "ar", name: "Arabic" },
-  { code: "hi", name: "Hindi" },
-  { code: "nl", name: "Dutch" },
-  { code: "pl", name: "Polish" },
-  { code: "tr", name: "Turkish" },
-  { code: "sv", name: "Swedish" },
-  { code: "no", name: "Norwegian" },
-  { code: "da", name: "Danish" },
-  { code: "fi", name: "Finnish" },
-  { code: "cs", name: "Czech" },
-  { code: "uk", name: "Ukrainian" },
-  { code: "ro", name: "Romanian" },
-  { code: "el", name: "Greek" },
-  { code: "hu", name: "Hungarian" },
-  { code: "th", name: "Thai" },
-  { code: "vi", name: "Vietnamese" },
-  { code: "id", name: "Indonesian" },
-  { code: "ms", name: "Malay" },
-  { code: "he", name: "Hebrew" },
-];
-
 export default function OnboardingPage() {
-  const [user, setUser] = useState<FirebaseUser | null>(null);
-  const [nativeLanguage, setNativeLanguage] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
-  useEffect(() => {
-    if (!auth) {
-      router.push("/login");
-      return;
-    }
+  // Use custom hook for auth
+  const { user, loading } = useAuth({
+    requireAuth: true,
+    requireOnboarding: false, // We're on the onboarding page
+  });
 
-    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        setLoading(false);
-      } else {
-        router.push("/login");
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+  const [nativeLanguage, setNativeLanguage] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,26 +60,14 @@ export default function OnboardingPage() {
   };
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "#00030D",
-        }}
-      >
-        <CircularProgress sx={{ color: "#B8CAD9" }} />
-      </Box>
-    );
+    return <FullPageLoading />;
   }
 
   return (
     <Box
       sx={{
         minHeight: "100vh",
-        bgcolor: "#00030D",
+        bgcolor: "background.default",
         display: "flex",
         alignItems: "center",
         justifyContent: "center",
@@ -135,7 +79,7 @@ export default function OnboardingPage() {
           elevation={3}
           sx={{
             p: 4,
-            bgcolor: "#0C1526",
+            bgcolor: "background.paper",
             borderRadius: 2,
           }}
         >
@@ -143,7 +87,7 @@ export default function OnboardingPage() {
             variant="h4"
             sx={{
               mb: 1,
-              color: "#B8CAD9",
+              color: "text.primary",
               fontWeight: 600,
               textAlign: "center",
             }}
@@ -155,7 +99,7 @@ export default function OnboardingPage() {
             variant="body1"
             sx={{
               mb: 4,
-              color: "#58748C",
+              color: "text.secondary",
               textAlign: "center",
             }}
           >
@@ -170,7 +114,10 @@ export default function OnboardingPage() {
 
           <form onSubmit={handleSubmit}>
             <FormControl fullWidth sx={{ mb: 3 }}>
-              <InputLabel id="native-language-label" sx={{ color: "#58748C" }}>
+              <InputLabel
+                id="native-language-label"
+                sx={{ color: "text.secondary" }}
+              >
                 Native Language
               </InputLabel>
               <Select
@@ -180,15 +127,15 @@ export default function OnboardingPage() {
                 label="Native Language"
                 onChange={(e) => setNativeLanguage(e.target.value)}
                 sx={{
-                  color: "#B8CAD9",
+                  color: "text.primary",
                   "& .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#4F6273",
+                    borderColor: "secondary.main",
                   },
                   "&:hover .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#58748C",
+                    borderColor: "primary.main",
                   },
                   "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                    borderColor: "#B8CAD9",
+                    borderColor: "text.primary",
                   },
                 }}
               >
@@ -207,15 +154,15 @@ export default function OnboardingPage() {
               disabled={submitting}
               sx={{
                 py: 1.5,
-                bgcolor: "#58748C",
-                color: "#B8CAD9",
+                bgcolor: "primary.main",
+                color: "text.primary",
                 fontWeight: 600,
                 "&:hover": {
-                  bgcolor: "#4F6273",
+                  bgcolor: "secondary.main",
                 },
                 "&:disabled": {
-                  bgcolor: "#4F6273",
-                  color: "#58748C",
+                  bgcolor: "secondary.main",
+                  color: "text.secondary",
                 },
               }}
             >

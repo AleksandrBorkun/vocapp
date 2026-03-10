@@ -1,79 +1,21 @@
+/**
+ * DeepL Translation API Route
+ * Translates text between languages using the DeepL API
+ * 
+ * @endpoint POST /api/translate
+ * @param request.text - Text to translate (required)
+ * @param request.sourceLang - Source language code (optional, auto-detected if omitted)
+ * @param request.targetLang - Target language code (required)
+ * 
+ * @returns JSON response with translated text or error
+ * @example
+ * POST /api/translate
+ * Body: { text: "Hello", sourceLang: "en", targetLang: "da" }
+ * Response: { translatedText: "Hej" } or { error: "..." }
+ */
+
+import { mapToDeeplCode } from "@/lib/constants/languages";
 import { NextRequest, NextResponse } from "next/server";
-
-// Language code mapping from your app codes to DeepL API codes
-const languageMap: Record<string, string> = {
-    // English variants
-    EN: "EN-US",
-    en: "EN-US",
-
-    // Portuguese variants
-    PT: "PT-PT",
-    pt: "PT-PT",
-
-    // Other languages (map uppercase and lowercase to DeepL format)
-    BG: "BG",
-    bg: "BG",
-    CS: "CS",
-    cs: "CS",
-    DA: "DA",
-    da: "DA",
-    DE: "DE",
-    de: "DE",
-    EL: "EL",
-    el: "EL",
-    ES: "ES",
-    es: "ES",
-    ET: "ET",
-    et: "ET",
-    FI: "FI",
-    fi: "FI",
-    FR: "FR",
-    fr: "FR",
-    HU: "HU",
-    hu: "HU",
-    ID: "ID",
-    id: "ID",
-    IT: "IT",
-    it: "IT",
-    JA: "JA",
-    ja: "JA",
-    KO: "KO",
-    ko: "KO",
-    LT: "LT",
-    lt: "LT",
-    LV: "LV",
-    lv: "LV",
-    NB: "NB",
-    nb: "NB",
-    NL: "NL",
-    nl: "NL",
-    PL: "PL",
-    pl: "PL",
-    RO: "RO",
-    ro: "RO",
-    RU: "RU",
-    ru: "RU",
-    SK: "SK",
-    sk: "SK",
-    SL: "SL",
-    sl: "SL",
-    SV: "SV",
-    sv: "SV",
-    TR: "TR",
-    tr: "TR",
-    UK: "UK",
-    uk: "UK",
-    ZH: "ZH",
-    zh: "ZH",
-
-    // Danish
-    DK: "DA",
-    dk: "DA",
-};
-
-function mapLanguageCode(code: string): string {
-    return languageMap[code] || code.toUpperCase();
-}
 
 export async function POST(request: NextRequest) {
     try {
@@ -105,11 +47,17 @@ export async function POST(request: NextRequest) {
         }
 
         // Map language codes to DeepL format
-        const mappedSourceLang = sourceLang ? mapLanguageCode(sourceLang) : undefined;
-        const mappedTargetLang = mapLanguageCode(targetLang);
+        const mappedSourceLang = sourceLang ? mapToDeeplCode(sourceLang) : undefined;
+        const mappedTargetLang = mapToDeeplCode(targetLang);
 
-        // Build request body using JSON (header-based authentication)
-        const requestBody: Record<string, any> = {
+        // Build request body for DeepL API
+        interface DeepLRequestBody {
+            text: string[];
+            target_lang: string;
+            source_lang?: string;
+        }
+
+        const requestBody: DeepLRequestBody = {
             text: [text.trim()],
             target_lang: mappedTargetLang,
         };

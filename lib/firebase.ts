@@ -34,7 +34,6 @@ if (typeof window !== 'undefined') {
     app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
     auth = getAuth(app);
     db = getFirestore(app);
-    console.log('Firebase initialized successfully');
   } catch (error) {
     console.error('Firebase initialization failed:', error);
     throw error;

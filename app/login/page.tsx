@@ -9,6 +9,7 @@ import {
   signInWithPopup,
 } from "firebase/auth";
 import { auth } from "@/lib/firebase";
+import { colors } from "@/lib/constants/colors";
 import {
   Container,
   Box,
@@ -40,8 +41,12 @@ export default function LoginPage() {
     try {
       await signInWithEmailAndPassword(auth, email, password);
       router.push("/home");
-    } catch (err: any) {
-      setError(err.message || "An error occurred. Please try again.");
+    } catch (err: unknown) {
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An error occurred. Please try again.";
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -60,9 +65,13 @@ export default function LoginPage() {
       const provider = new GoogleAuthProvider();
       await signInWithPopup(auth, provider);
       router.push("/home");
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error initiating Google sign-in:", err);
-      setError(err.message || "An error occurred. Please try again.");
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "An error occurred. Please try again.";
+      setError(errorMessage);
       setLoading(false);
     }
   };
@@ -135,6 +144,9 @@ export default function LoginPage() {
               placeholder="superhero@miro.com"
               required
               sx={{ mb: 2.5 }}
+              inputProps={{
+                "data-testid": "email-input",
+              }}
               InputProps={{
                 sx: {
                   bgcolor: "background.default",
@@ -161,7 +173,7 @@ export default function LoginPage() {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="your password"
               required
-              inputProps={{ minLength: 6 }}
+              inputProps={{ minLength: 6, "data-testid": "password-input" }}
               sx={{ mb: 2.5 }}
               InputProps={{
                 sx: {
@@ -185,6 +197,7 @@ export default function LoginPage() {
               fullWidth
               variant="contained"
               disabled={loading}
+              data-testid="login-submit-button"
               sx={{
                 py: 1.5,
                 bgcolor: "primary.main",
@@ -206,7 +219,7 @@ export default function LoginPage() {
             <Link
               href="/forgot-password"
               style={{
-                color: "#B8CAD9",
+                color: colors.lightBlue,
                 textDecoration: "none",
                 fontSize: "0.875rem",
                 fontWeight: 500,
@@ -224,6 +237,7 @@ export default function LoginPage() {
               disabled={loading}
               fullWidth
               variant="contained"
+              data-testid="google-signin-button"
               sx={{
                 py: 1.5,
                 bgcolor: "secondary.main",
@@ -266,7 +280,7 @@ export default function LoginPage() {
             <Link
               href="/privacy"
               style={{
-                color: "#B8CAD9",
+                color: colors.lightBlue,
                 textDecoration: "none",
                 fontSize: "0.875rem",
                 fontWeight: 500,

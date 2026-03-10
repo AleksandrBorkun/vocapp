@@ -1,24 +1,25 @@
 'use client';
 import { createTheme } from '@mui/material/styles';
+import { colors } from './constants/colors';
 
 const theme = createTheme({
     palette: {
         mode: 'dark',
         primary: {
-            main: '#58748C', // primary-light
-            dark: '#00030D', // primary-dark
-            light: '#B8CAD9', // primary-pale
+            main: colors.mediumBlue,
+            dark: colors.darkestBlue,
+            light: colors.lightBlue,
         },
         secondary: {
-            main: '#4F6273', // primary-gray
+            main: colors.slateBlue,
         },
         background: {
-            default: '#00030D', // primary-dark
-            paper: '#0C1526', // primary-medium
+            default: colors.darkestBlue,
+            paper: colors.darkBlue,
         },
         text: {
-            primary: '#B8CAD9', // primary-pale
-            secondary: '#58748C', // primary-light
+            primary: colors.lightBlue,
+            secondary: colors.mediumBlue,
         },
     },
     typography: {
