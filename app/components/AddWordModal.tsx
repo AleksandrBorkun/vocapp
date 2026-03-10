@@ -17,9 +17,15 @@ import {
 } from "@mui/material";
 import TranslateIcon from "@mui/icons-material/Translate";
 
+/**
+ * Props for the AddWordModal component
+ */
 interface AddWordModalProps {
+  /** Whether the modal is open */
   open: boolean;
+  /** Function called when modal is closed */
   onClose: () => void;
+  /** Function to save the word - receives word data and optional index for edits */
   onSave: (
     word: string,
     translation: string,
@@ -27,17 +33,38 @@ interface AddWordModalProps {
     picture?: string,
     index?: number,
   ) => Promise<void>;
+  /** Source language code for translation */
   sourceLang?: string;
+  /** Target language code for translation */
   targetLang?: string;
+  /** Whether in edit mode (true) or create mode (false) */
   editMode?: boolean;
+  /** Initial word data when editing */
   initialWord?: {
     word: string;
     translation: string;
     example?: string;
     picture?: string;
   };
+  /** Index of word being edited */
   wordIndex?: number;
 }
+
+/**
+ * Modal for adding or editing vocabulary words
+ * Features automatic translation, image search, and form validation
+ *
+ * @component
+ * @example
+ * <AddWordModal
+ *   open={isOpen}
+ *   onClose={() => setIsOpen(false)}
+ *   onSave={handleSaveWord}
+ *   sourceLang="en"
+ *   targetLang="da"
+ *   editMode={false}
+ * />
+ */
 
 export default function AddWordModal({
   open,
@@ -113,7 +140,14 @@ export default function AddWordModal({
       }
 
       if (data.imageUrl) {
-        setPicture(data.imageUrl);
+        console.log(data);
+        const urlParts = data.imageUrl.split("_");
+        const partWithImageFormat = urlParts.pop();
+        const [_, imageFormat] = partWithImageFormat.split(".");
+        const newImageFormat = `1280.${imageFormat}`;
+        urlParts.push(newImageFormat);
+
+        setPicture(urlParts.join("_"));
         setImageWarning(null);
       } else {
         setImageWarning(

@@ -1,83 +1,36 @@
+/**
+ * Pixabay Image Search API Route
+ * Fetches relevant images for vocabulary words using the Pixabay API
+ * 
+ * @endpoint POST /api/pixabay
+ * @param request.word - The word to search for (required)
+ * @param request.lang - Language code for localized results (required)
+ * 
+ * @returns JSON response with imageUrl or error
+ * @example
+ * POST /api/pixabay
+ * Body: { word: "cat", lang: "en" }
+ * Response: { imageUrl: "https://..." } or { error: "..." }
+ */
+
+import { mapToPixabayCode } from "@/lib/constants/languages";
 import { unstable_cache } from "next/cache";
 import { NextRequest, NextResponse } from "next/server";
 
-// Language code mapping from app codes to Pixabay ISO 639-1 codes
-const pixabayLanguageMap: Record<string, string> = {
-    // Map uppercase app codes to lowercase ISO codes
-    EN: "en",
-    DK: "da", // Danish
-    PT: "pt",
-    ES: "es",
-    FR: "fr",
-    DE: "de",
-    IT: "it",
-    BG: "bg",
-    CS: "cs",
-    DA: "da",
-    EL: "el",
-    ET: "et",
-    FI: "fi",
-    HU: "hu",
-    ID: "id",
-    JA: "ja",
-    KO: "ko",
-    LT: "lt",
-    LV: "lv",
-    NB: "nb",
-    NL: "nl",
-    PL: "pl",
-    RO: "ro",
-    RU: "ru",
-    SK: "sk",
-    SL: "sl",
-    SV: "sv",
-    TR: "tr",
-    UK: "uk",
-    ZH: "zh",
-    // Support lowercase input as well
-    en: "en",
-    dk: "da",
-    pt: "pt",
-    es: "es",
-    fr: "fr",
-    de: "de",
-    it: "it",
-    bg: "bg",
-    cs: "cs",
-    da: "da",
-    el: "el",
-    et: "et",
-    fi: "fi",
-    hu: "hu",
-    id: "id",
-    ja: "ja",
-    ko: "ko",
-    lt: "lt",
-    lv: "lv",
-    nb: "nb",
-    nl: "nl",
-    pl: "pl",
-    ro: "ro",
-    ru: "ru",
-    sk: "sk",
-    sl: "sl",
-    sv: "sv",
-    tr: "tr",
-    uk: "uk",
-    zh: "zh",
-};
-
-function mapLanguageCode(code: string): string {
-    return pixabayLanguageMap[code] || "en"; // Default to English if unknown
-}
-
-// Cached function to fetch Pixabay image
+/**
+ * Cached function to fetch Pixabay image
+ * Reduces API calls by caching results
+ * @param searchTerm - The search term
+ * @param lang - Language code
+ * @param apiKey - Pixabay API key
+ * @returns Image URL or null if not found
+ */
 const getCachedPixabayImage = async (
     searchTerm: string,
     lang: string,
     apiKey: string
 ): Promise<string | null> => {
-    const mappedLang = mapLanguageCode(lang);
+    const mappedLang = mapToPixabayCode(lang);
     const url = `https://pixabay.com/api/?key=${apiKey}&q=${encodeURIComponent(searchTerm)}&lang=${mappedLang}&image_type=photo&per_page=3&safesearch=true`;
 
     try {
@@ -93,7 +46,7 @@ const getCachedPixabayImage = async (
         // Return first image URL if available, otherwise null
         if (data.hits && data.hits.length > 0) {
             // Return the previewURL for smaller file size (better for base64 encoding)
-            return data.hits[0].webformatURL || data.hits[0].previewURL;
+            return data.hits[0].previewURL;
         }
 
         return null;

@@ -1,51 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+import dynamic from "next/dynamic";
 import { useRouter, useParams } from "next/navigation";
-import { onAuthStateChanged, User } from "firebase/auth";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
-import { auth, db } from "@/lib/firebase";
-import {
-  Box,
-  Container,
-  Typography,
-  Button,
-  IconButton,
-  CircularProgress,
-  Card,
-  CardContent,
-  Switch,
-  FormControlLabel,
-} from "@mui/material";
-import EditIcon from "@mui/icons-material/Edit";
-import AddWordModal from "@/app/components/AddWordModal";
+import { Word } from "@/lib/types";
+import FullPageLoading from "@/app/components/common/FullPageLoading";
+import { useAuth } from "@/app/hooks/useAuth";
+import { useWords } from "@/app/hooks/useWords";
+import { Box, Container, Typography, IconButton } from "@mui/material";
+import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
+import AddWordButton from "@/app/components/deck/AddWordButton";
+import WordCard from "@/app/components/deck/WordCard";
 
-interface Word {
-  word: string;
-  translation: string;
-  example?: string;
-  picture?: string;
-  accuracy: number;
-}
-
-interface Deck {
-  id: string;
-  name: string;
-  description: string;
-  study: string;
-  language: string;
-  words: Word[];
-  createdAt: Date;
-}
+// Lazy load modal for code splitting
+const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
+  loading: () => <FullPageLoading />,
+});
 
 export default function DeckPage() {
   const router = useRouter();
   const params = useParams();
   const deckId = params.id as string;
 
-  const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [deck, setDeck] = useState<Deck | null>(null);
+  // Use custom hooks
+  const { user, loading: authLoading } = useAuth({
+    requireAuth: true,
+  });
+  const {
+    deck,
+    loading: deckLoading,
+    loadDeck,
+    updateWord: updateWordInDeck,
+    addWord,
+  } = useWords();
+
   const [showTranslations, setShowTranslations] = useState<{
     [key: number]: boolean;
   }>({});
@@ -53,130 +41,76 @@ export default function DeckPage() {
   const [editingWordIndex, setEditingWordIndex] = useState<number | null>(null);
   const [editingWord, setEditingWord] = useState<Word | null>(null);
 
+  const loading = authLoading || deckLoading;
+
+  // Load deck when component mounts or deckId changes
   useEffect(() => {
-    if (!auth) return;
-
-    const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
-      if (currentUser) {
-        setUser(currentUser);
-        await loadDeck(deckId);
-      } else {
-        router.push("/login");
-      }
-      setLoading(false);
-    });
-
-    return () => unsubscribe();
-  }, [deckId, router]);
-
-  const loadDeck = async (id: string) => {
-    if (!db) return;
-
-    try {
-      const deckRef = doc(db, "decks", id);
-      const deckSnap = await getDoc(deckRef);
-
-      if (deckSnap.exists()) {
-        const data = deckSnap.data();
-        setDeck({
-          id: deckSnap.id,
-          name: data.name,
-          description: data.description,
-          study: data.study,
-          language: data.language,
-          words: data.words || [],
-          createdAt: data.createdAt?.toDate() || new Date(),
-        });
-      }
-    } catch (error) {
-      console.error("Error loading deck:", error);
+    if (user && deckId) {
+      loadDeck(deckId);
     }
-  };
+  }, [deckId, user, loadDeck]);
 
-  const toggleTranslation = (index: number) => {
+  const toggleTranslation = useCallback((index: number) => {
     setShowTranslations((prev) => ({
       ...prev,
       [index]: !prev[index],
     }));
-  };
+  }, []);
 
-  const handleAddWord = () => {
+  const handleAddWord = useCallback(() => {
     setShowAddWordModal(true);
-  };
+  }, []);
 
-  const handleEditWord = (index: number, word: Word) => {
+  const handleEditWord = useCallback((index: number, word: Word) => {
     setEditingWordIndex(index);
     setEditingWord(word);
     setShowAddWordModal(true);
-  };
+  }, []);
 
-  const handleCloseModal = () => {
+  const handleCloseModal = useCallback(() => {
     setEditingWordIndex(null);
     setEditingWord(null);
     setShowAddWordModal(false);
-  };
+  }, []);
 
-  const handleSaveWord = async (
-    word: string,
-    translation: string,
-    example: string,
-    picture?: string,
-    index?: number,
-  ) => {
-    if (!deck || !db) return;
+  const handleSaveWord = useCallback(
+    async (
+      word: string,
+      translation: string,
+      example: string,
+      picture?: string,
+      index?: number,
+    ) => {
+      if (!deck) return;
 
-    const deckRef = doc(db, "decks", deckId);
-    let updatedWords: Word[];
-
-    if (index !== undefined && index !== null) {
-      // Edit existing word
-      updatedWords = [...deck.words];
-      updatedWords[index] = {
-        ...updatedWords[index],
-        word,
-        translation,
-        example,
-        picture,
-      };
-    } else {
-      // Add new word
-      updatedWords = [
-        ...deck.words,
-        {
-          word,
-          translation,
-          example,
-          picture,
-          accuracy: 0,
-        },
-      ];
-    }
-
-    await updateDoc(deckRef, {
-      words: updatedWords,
-    });
-
-    // Update local state
-    setDeck({
-      ...deck,
-      words: updatedWords,
-    });
-  };
+      try {
+        if (index !== undefined && index !== null) {
+          // Edit existing word
+          await updateWordInDeck(deckId, index, {
+            word,
+            translation,
+            example,
+            picture,
+          });
+        } else {
+          // Add new word
+          await addWord(deckId, {
+            word,
+            translation,
+            example,
+            picture,
+            accuracy: 0,
+          });
+        }
+      } catch (error) {
+        console.error("Error saving word:", error);
+      }
+    },
+    [deck, deckId, updateWordInDeck, addWord],
+  );
 
   if (loading) {
-    return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "background.default",
-        }}
-      >
-        <CircularProgress size={60} />
-      </Box>
-    );
+    return <FullPageLoading />;
   }
 
   if (!deck) {
@@ -204,40 +138,7 @@ export default function DeckPage() {
       }}
     >
       {/* Header */}
-      <Box
-        sx={{
-          bgcolor: "background.paper",
-          borderBottom: 1,
-          borderColor: "secondary.main",
-          p: 2,
-        }}
-      >
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            maxWidth: "600px",
-            mx: "auto",
-          }}
-        >
-          <IconButton
-            onClick={() => router.push("/home")}
-            sx={{ color: "text.primary" }}
-          >
-            <Box component="span" sx={{ fontSize: "1.5rem" }}>
-              🏠
-            </Box>
-          </IconButton>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <IconButton sx={{ color: "text.primary" }}>
-              <Box component="span" sx={{ fontSize: "1.5rem" }}>
-                🔍
-              </Box>
-            </IconButton>
-          </Box>
-        </Box>
-      </Box>
+      <DeckHeaderBar onNavigateHome={() => router.push("/home")} />
 
       {/* Main Content */}
       <Container maxWidth="sm" sx={{ mt: 3 }}>
@@ -287,171 +188,19 @@ export default function DeckPage() {
         </Box>
 
         {/* Add Word Button */}
-        <Button
-          onClick={handleAddWord}
-          fullWidth
-          sx={{
-            bgcolor: "background.paper",
-            color: "text.primary",
-            border: 1,
-            borderColor: "secondary.main",
-            p: 2.5,
-            mb: 2,
-            display: "flex",
-            justifyContent: "flex-start",
-            alignItems: "center",
-            gap: 2,
-            textTransform: "none",
-            fontSize: "1.125rem",
-            fontWeight: 500,
-            "&:hover": {
-              bgcolor: "background.paper",
-              borderColor: "primary.main",
-            },
-          }}
-        >
-          <Box
-            sx={{
-              width: 80,
-              height: 80,
-              bgcolor: "#4F6273",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              borderRadius: 1,
-            }}
-          >
-            <Box component="span" sx={{ fontSize: "2.5rem" }}>
-              ➕
-            </Box>
-          </Box>
-          <Typography variant="h6" fontWeight={600} color="text.primary">
-            Add Word
-          </Typography>
-        </Button>
+        <AddWordButton onAddWord={handleAddWord} />
 
         {/* Words List */}
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           {deck.words.map((word, index) => (
-            <Button
+            <WordCard
               key={index}
-              fullWidth
-              sx={{
-                bgcolor: "background.paper",
-                color: "text.primary",
-                border: 1,
-                borderColor: "secondary.main",
-                p: 2.5,
-                display: "flex",
-                justifyContent: "flex-start",
-                alignItems: "center",
-                gap: 2,
-                textTransform: "none",
-                "&:hover": {
-                  bgcolor: "background.paper",
-                  borderColor: "primary.main",
-                },
-              }}
-            >
-              <Box
-                sx={{
-                  width: 80,
-                  height: 80,
-                  bgcolor: "#4F6273",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  borderRadius: 1,
-                  flexShrink: 0,
-                }}
-              >
-                {word.picture ? (
-                  <Box
-                    component="img"
-                    src={word.picture}
-                    alt={word.word}
-                    sx={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "cover",
-                      borderRadius: 1,
-                    }}
-                  />
-                ) : (
-                  <Box component="span" sx={{ fontSize: "2rem" }}>
-                    🖼️
-                  </Box>
-                )}
-              </Box>
-              <Box sx={{ flex: 1, textAlign: "left" }}>
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 0.5,
-                  }}
-                >
-                  <Typography
-                    variant="h6"
-                    fontWeight={600}
-                    color="text.primary"
-                  >
-                    {word.word}
-                  </Typography>
-                  <IconButton
-                    size="small"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEditWord(index, word);
-                    }}
-                    sx={{
-                      color: "text.secondary",
-                      "&:hover": {
-                        color: "primary.main",
-                        bgcolor: "rgba(184, 202, 217, 0.1)",
-                      },
-                    }}
-                  >
-                    <EditIcon fontSize="small" />
-                  </IconButton>
-                </Box>
-                <Box
-                  sx={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: 1,
-                  }}
-                >
-                  <Typography variant="body2" color="text.primary">
-                    Show Translation
-                  </Typography>
-                  <Switch
-                    checked={showTranslations[index] || false}
-                    onChange={() => toggleTranslation(index)}
-                    size="small"
-                    sx={{
-                      "& .MuiSwitch-switchBase.Mui-checked": {
-                        color: "#B8CAD9",
-                      },
-                      "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track":
-                        {
-                          backgroundColor: "#B8CAD9",
-                        },
-                    }}
-                  />
-                </Box>
-                {showTranslations[index] && (
-                  <Typography
-                    variant="body1"
-                    color="primary.main"
-                    sx={{ mt: 1 }}
-                  >
-                    {word.translation}
-                  </Typography>
-                )}
-              </Box>
-            </Button>
+              word={word}
+              index={index}
+              showTranslation={showTranslations[index] || false}
+              onToggleTranslation={toggleTranslation}
+              onEdit={handleEditWord}
+            />
           ))}
         </Box>
 
