@@ -11,6 +11,8 @@ import { Box, Container, Typography, IconButton } from "@mui/material";
 import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
 import AddWordButton from "@/app/components/deck/AddWordButton";
 import WordCard from "@/app/components/deck/WordCard";
+import UploadPicture from "@/app/components/deck/UploadPictureButton";
+import { OverlayPicture } from "@/app/components/deck/OverlayPicture";
 
 // Lazy load modal for code splitting
 const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
@@ -20,6 +22,7 @@ const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
 export default function DeckPage() {
   const router = useRouter();
   const params = useParams();
+  const [imageFile, setImageFile] = useState<File>();
   const deckId = params.id as string;
 
   // Use custom hooks
@@ -160,18 +163,7 @@ export default function DeckPage() {
             {deck.name}
           </Typography>
           <Box sx={{ display: "flex", gap: 1 }}>
-            <IconButton
-              sx={{
-                bgcolor: "#B8CAD9",
-                width: 48,
-                height: 48,
-                "&:hover": { bgcolor: "#58748C" },
-              }}
-            >
-              <Box component="span" sx={{ fontSize: "1.5rem" }}>
-                👤
-              </Box>
-            </IconButton>
+            <UploadPicture onUpload={setImageFile} />
             <IconButton
               sx={{
                 bgcolor: "#B8CAD9",
@@ -212,6 +204,8 @@ export default function DeckPage() {
           </Box>
         )}
       </Container>
+
+      <OverlayPicture file={imageFile} onClose={setImageFile} />
 
       {/* Add Word Modal */}
       <AddWordModal
