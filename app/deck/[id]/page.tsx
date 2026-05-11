@@ -3,16 +3,12 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useParams } from "next/navigation";
-import { Deck, Word } from "@/lib/types";
+import { Word } from "@/lib/types";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
-import { Box, Container, Typography, IconButton } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
-import AddWordButton from "@/app/components/deck/AddWordButton";
-import WordCard from "@/app/components/deck/WordCard";
-import UploadPicture from "@/app/components/deck/UploadPictureButton";
-import { OverlayPicture } from "@/app/components/deck/OverlayPicture";
 import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
 import { getTranslation } from "@/lib/translations";
 import { CardsGridComponent } from "@/app/components/deck/CardsGrid";
@@ -25,9 +21,7 @@ const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
 export default function DeckPage() {
   const router = useRouter();
   const params = useParams();
-  const [imageFile, setImageFile] = useState<File>();
   const deckId = params.id as string;
-  const [selectedWords, setSelectedWords] = useState<string | null>(null);
 
   // Use custom hooks
   const { user, loading: authLoading } = useAuth({
@@ -153,30 +147,6 @@ export default function DeckPage() {
         cards={deck.words}
       />
       <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
-      {/* Main Content */}
-      {/* {ComponentsBeforeRedesign(
-        deck,
-        setImageFile,
-        handleAddWord,
-        showTranslations,
-        toggleTranslation,
-        handleEditWord,
-        imageFile,
-        setSelectedWords,
-        showAddWordModal,
-        handleCloseModal,
-        handleSaveWord,
-        editingWordIndex,
-        editingWord,
-        selectedWords,
-      )} */}
-
-      <OverlayPicture
-        file={imageFile}
-        onClose={setImageFile}
-        handleAddWord={handleAddWord}
-        setEditingWord={setSelectedWords}
-      />
 
       {/* Add Word Modal */}
       <AddWordModal
@@ -188,96 +158,7 @@ export default function DeckPage() {
         editMode={editingWordIndex !== null}
         initialWord={editingWord || undefined}
         wordIndex={editingWordIndex ?? undefined}
-        selectedWords={selectedWords || undefined}
       />
     </Box>
-  );
-}
-
-function ComponentsBeforeRedesign(
-  deck: Deck,
-  setImageFile: any,
-  handleAddWord: () => void,
-  showTranslations: { [key: number]: boolean },
-  toggleTranslation: (index: number) => void,
-  handleEditWord: (index: number, word: Word) => void,
-  imageFile: File | undefined,
-  setSelectedWords: any,
-  showAddWordModal: boolean,
-  handleCloseModal: () => void,
-  handleSaveWord: (
-    word: string,
-    translation: string,
-    example: string,
-    picture?: string,
-    index?: number,
-  ) => Promise<void>,
-  editingWordIndex: number | null,
-  editingWord: Word | null,
-  selectedWords: string | null,
-) {
-  return (
-    <>
-      <Container maxWidth="sm" sx={{ mt: 3 }}>
-        {/* Title Section */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-            color="text.primary"
-            sx={{ fontSize: "1.75rem" }}
-          >
-            {deck.name}
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <UploadPicture onUpload={setImageFile} />
-            <IconButton
-              sx={{
-                bgcolor: "#B8CAD9",
-                width: 48,
-                height: 48,
-                "&:hover": { bgcolor: "#58748C" },
-              }}
-            >
-              <Box component="span" sx={{ fontSize: "1.5rem" }}>
-                🔄
-              </Box>
-            </IconButton>
-          </Box>
-        </Box>
-
-        {/* Add Word Button */}
-        <AddWordButton onAddWord={handleAddWord} />
-
-        {/* Words List */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {deck.words.map((word, index) => (
-            <WordCard
-              key={index}
-              word={word}
-              index={index}
-              showTranslation={showTranslations[index] || false}
-              onToggleTranslation={toggleTranslation}
-              onEdit={handleEditWord}
-            />
-          ))}
-        </Box>
-
-        {deck.words.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 6 }}>
-            <Typography color="secondary.main" variant="body1">
-              No words yet. Add your first word to start learning!
-            </Typography>
-          </Box>
-        )}
-      </Container>
-    </>
   );
 }
