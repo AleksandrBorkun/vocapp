@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import dynamic from "next/dynamic";
 import { useRouter, useParams } from "next/navigation";
-import { Word } from "@/lib/types";
+import { Deck, Word } from "@/lib/types";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
@@ -13,6 +13,9 @@ import AddWordButton from "@/app/components/deck/AddWordButton";
 import WordCard from "@/app/components/deck/WordCard";
 import UploadPicture from "@/app/components/deck/UploadPictureButton";
 import { OverlayPicture } from "@/app/components/deck/OverlayPicture";
+import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
+import { getTranslation } from "@/lib/translations";
+import { CardsGridComponent } from "@/app/components/deck/CardsGrid";
 
 // Lazy load modal for code splitting
 const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
@@ -24,6 +27,7 @@ export default function DeckPage() {
   const params = useParams();
   const [imageFile, setImageFile] = useState<File>();
   const deckId = params.id as string;
+  const [selectedWords, setSelectedWords] = useState<string | null>(null);
 
   // Use custom hooks
   const { user, loading: authLoading } = useAuth({
@@ -143,7 +147,77 @@ export default function DeckPage() {
       {/* Header */}
       <DeckHeaderBar onNavigateHome={() => router.push("/home")} />
 
+      <HeaderHolder
+        title={getTranslation("deck.stacks.personalStack")}
+        breadcrumbs={deck.name}
+        cards={deck.words}
+      />
+      <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
       {/* Main Content */}
+      {/* {ComponentsBeforeRedesign(
+        deck,
+        setImageFile,
+        handleAddWord,
+        showTranslations,
+        toggleTranslation,
+        handleEditWord,
+        imageFile,
+        setSelectedWords,
+        showAddWordModal,
+        handleCloseModal,
+        handleSaveWord,
+        editingWordIndex,
+        editingWord,
+        selectedWords,
+      )} */}
+
+      <OverlayPicture
+        file={imageFile}
+        onClose={setImageFile}
+        handleAddWord={handleAddWord}
+        setEditingWord={setSelectedWords}
+      />
+
+      {/* Add Word Modal */}
+      <AddWordModal
+        open={showAddWordModal}
+        onClose={handleCloseModal}
+        onSave={handleSaveWord}
+        sourceLang={deck?.study}
+        targetLang={deck?.language}
+        editMode={editingWordIndex !== null}
+        initialWord={editingWord || undefined}
+        wordIndex={editingWordIndex ?? undefined}
+        selectedWords={selectedWords || undefined}
+      />
+    </Box>
+  );
+}
+
+function ComponentsBeforeRedesign(
+  deck: Deck,
+  setImageFile: any,
+  handleAddWord: () => void,
+  showTranslations: { [key: number]: boolean },
+  toggleTranslation: (index: number) => void,
+  handleEditWord: (index: number, word: Word) => void,
+  imageFile: File | undefined,
+  setSelectedWords: any,
+  showAddWordModal: boolean,
+  handleCloseModal: () => void,
+  handleSaveWord: (
+    word: string,
+    translation: string,
+    example: string,
+    picture?: string,
+    index?: number,
+  ) => Promise<void>,
+  editingWordIndex: number | null,
+  editingWord: Word | null,
+  selectedWords: string | null,
+) {
+  return (
+    <>
       <Container maxWidth="sm" sx={{ mt: 3 }}>
         {/* Title Section */}
         <Box
@@ -204,20 +278,6 @@ export default function DeckPage() {
           </Box>
         )}
       </Container>
-
-      <OverlayPicture file={imageFile} onClose={setImageFile} />
-
-      {/* Add Word Modal */}
-      <AddWordModal
-        open={showAddWordModal}
-        onClose={handleCloseModal}
-        onSave={handleSaveWord}
-        sourceLang={deck?.study}
-        targetLang={deck?.language}
-        editMode={editingWordIndex !== null}
-        initialWord={editingWord || undefined}
-        wordIndex={editingWordIndex ?? undefined}
-      />
-    </Box>
+    </>
   );
 }

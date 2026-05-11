@@ -1,6 +1,15 @@
 import { Box, Dialog } from "@mui/material";
 import { createWorker } from "tesseract.js";
-import { useEffect, useState, useCallback } from "react";
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useRef,
+  SetStateAction,
+  Dispatch,
+} from "react";
+import PreviewSelectedDrawer from "./PreviewSelectedDrawer";
+import { Word } from "@/lib/types";
 
 type WordBox = {
   word: string;
@@ -15,6 +24,8 @@ type PageSize = { width: number; height: number };
 type OverlayPictureProps = {
   file: File | undefined;
   onClose: (file?: File) => void;
+  handleAddWord: () => void;
+  setEditingWord: Dispatch<SetStateAction<string | null>>;
 };
 
 const parseHocr = (
@@ -61,10 +72,17 @@ const parseImage = async (file: File): Promise<string> => {
   return result.data.hocr ?? "";
 };
 
-export const OverlayPicture = ({ file, onClose }: OverlayPictureProps) => {
+export const OverlayPicture = ({
+  file,
+  onClose,
+  setEditingWord,
+  handleAddWord,
+}: OverlayPictureProps) => {
   const [base64, setBase64] = useState("");
   const [wordBoxes, setWordBoxes] = useState<WordBox[]>([]);
   const [pageSize, setPageSize] = useState<PageSize | null>(null);
+  const element = useRef<HTMLDivElement>(null);
+  const [words, setWords] = useState<Word | null>(null);
 
   useEffect(() => {
     const processFile = async (_file: File) => {
@@ -97,11 +115,32 @@ export const OverlayPicture = ({ file, onClose }: OverlayPictureProps) => {
     const word = target.getAttribute("data-word");
     if (word) {
       console.log("Clicked word:", word);
+      setWords((curr: Word | null) =>
+        curr
+          ? {
+              word: `${curr.word} ${word}`,
+              translation: "",
+              accuracy: 0,
+            }
+          : {
+              word: word,
+              translation: "",
+              accuracy: 0,
+            },
+      );
     }
   }, []);
 
   return (
-    <Dialog open={!!file} onClose={handleClose}>
+    <Dialog open={!!file} onClose={handleClose} ref={element}>
+      <PreviewSelectedDrawer
+        words={words?.word}
+        container={element}
+        handleAddWord={() => {
+          handleAddWord();
+          setEditingWord(words?.word || "");
+        }}
+      />
       {!!base64 && pageSize && (
         <Box sx={{ position: "relative", lineHeight: 0 }}>
           <img

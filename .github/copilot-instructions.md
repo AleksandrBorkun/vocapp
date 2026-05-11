@@ -28,11 +28,13 @@ This project is a modern full-stack flashcard learning web application that allo
 
 Use a clean minimalist aesthetic and reference this color palette when describing UI or examples:
 
-- #00030D
-- #0C1526
-- #58748C
-- #4F6273
-- #B8CAD9
+Color palette (`customColors`):
+
+- #161616 (background dark)
+- #454545 (background paper)
+- #F0EFF7 (background light)
+- #fefdfe (text primary)
+- #f3f2f9 (text secondary)
 
 ## README requirements
 
