@@ -10,6 +10,7 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { useDecks } from "@/app/hooks/useDecks";
 import { Box, Container, Typography, Button } from "@mui/material";
 import DecksCarousel from "@/app/components/home/DecksCarousel";
+import { OverlayPicture } from "@/app/components/deck/OverlayPicture";
 
 // Lazy load modals for code splitting
 const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
@@ -50,6 +51,8 @@ export default function HomePage() {
   const [currentDeck, setCurrentDeck] = useState<Deck | null>(null);
   const [showAddWordsModal, setShowAddWordsModal] = useState(false);
   const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
+  const [imageFile, setImageFile] = useState<File | undefined>(undefined);
+  const [selectedWords, setSelectedWords] = useState<string | null>(null);
 
   const loading = authLoading || decksLoading;
   const error = authError || decksError;
@@ -131,6 +134,11 @@ export default function HomePage() {
   const startStudying = useCallback((deck: Deck) => {
     setCurrentDeck(deck);
     setShowStudyModal(true);
+  }, []);
+
+  const handleScanPicture = useCallback((deck: Deck, file: File) => {
+    setSelectedDeck(deck);
+    setImageFile(file);
   }, []);
 
   if (loading) {
@@ -221,6 +229,7 @@ export default function HomePage() {
             onAddWords={openAddWordsModal}
             onDeleteDeck={handleDeleteDeck}
             onCreateDeck={() => setShowCreateModal(true)}
+            onScanPicture={handleScanPicture}
           />
         )}
       </Container>
@@ -238,10 +247,21 @@ export default function HomePage() {
         onClose={() => {
           setShowAddWordsModal(false);
           setSelectedDeck(null);
+          setSelectedWords(null);
+          setImageFile(undefined);
         }}
         onSave={handleAddWord}
         sourceLang={selectedDeck?.study}
         targetLang={selectedDeck?.language}
+        selectedWords={selectedWords ?? undefined}
+      />
+
+      {/* OCR Overlay */}
+      <OverlayPicture
+        file={imageFile}
+        onClose={setImageFile}
+        handleAddWord={() => setShowAddWordsModal(true)}
+        setEditingWord={setSelectedWords}
       />
 
       {/* Study Modal */}

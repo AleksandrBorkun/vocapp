@@ -48,6 +48,7 @@ interface AddWordModalProps {
   };
   /** Index of word being edited */
   wordIndex?: number;
+  selectedWords?: string;
 }
 
 /**
@@ -75,6 +76,7 @@ export default function AddWordModal({
   editMode = false,
   initialWord,
   wordIndex,
+  selectedWords,
 }: AddWordModalProps) {
   const [word, setWord] = useState("");
   const [translation, setTranslation] = useState("");
@@ -92,13 +94,18 @@ export default function AddWordModal({
       setTranslation(initialWord.translation);
       setExample(initialWord.example || "");
       setPicture(initialWord.picture || null);
+    } else if (open && selectedWords) {
+      setWord(selectedWords);
+      setTranslation("");
+      setExample("");
+      setPicture(null);
     } else if (open && !editMode) {
       setWord("");
       setTranslation("");
       setExample("");
       setPicture(null);
     }
-  }, [open, editMode, initialWord]);
+  }, [open, editMode, initialWord, selectedWords]);
 
   const handleClose = () => {
     setWord("");

@@ -14,6 +14,7 @@ interface DecksCarouselProps {
   onAddWords: (deckId: string) => void;
   onDeleteDeck: (deckId: string) => void;
   onCreateDeck: () => void;
+  onScanPicture: (deck: Deck, file: File) => void;
 }
 
 export default function DecksCarousel({
@@ -22,6 +23,7 @@ export default function DecksCarousel({
   onAddWords,
   onDeleteDeck,
   onCreateDeck,
+  onScanPicture,
 }: DecksCarouselProps) {
   return (
     <Box
@@ -60,6 +62,7 @@ export default function DecksCarousel({
               onStudy={onStudyDeck}
               onAddWords={onAddWords}
               onDelete={onDeleteDeck}
+              onScanPicture={onScanPicture}
             />
           </SwiperSlide>
         ))}

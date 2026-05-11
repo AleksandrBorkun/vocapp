@@ -4,6 +4,7 @@ import { memo } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Button, Card, CardContent, Typography } from "@mui/material";
 import { Deck } from "@/lib/types";
+import UploadPicture from "@/app/components/deck/UploadPictureButton";
 
 /**
  * Props for the DeckCard component
@@ -17,6 +18,8 @@ interface DeckCardProps {
   onAddWords: (deckId: string) => void;
   /** Function called when delete button is clicked */
   onDelete: (deckId: string) => void;
+  /** Function called when an image is selected for OCR */
+  onScanPicture: (deck: Deck, file: File) => void;
 }
 
 /**
@@ -33,7 +36,13 @@ interface DeckCardProps {
  * />
  */
 
-function DeckCard({ deck, onStudy, onAddWords, onDelete }: DeckCardProps) {
+function DeckCard({
+  deck,
+  onStudy,
+  onAddWords,
+  onDelete,
+  onScanPicture,
+}: DeckCardProps) {
   const router = useRouter();
 
   return (
@@ -105,6 +114,7 @@ function DeckCard({ deck, onStudy, onAddWords, onDelete }: DeckCardProps) {
           >
             Add Words
           </Button>
+          <UploadPicture onUpload={(file) => onScanPicture(deck, file)} />
           <Button
             onClick={() => onDelete(deck.id)}
             variant="outlined"

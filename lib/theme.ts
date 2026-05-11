@@ -1,25 +1,25 @@
 'use client';
 import { createTheme } from '@mui/material/styles';
-import { colors } from './constants/colors';
+import { customColors } from './constants/colors';
 
 const theme = createTheme({
     palette: {
         mode: 'dark',
         primary: {
-            main: colors.mediumBlue,
-            dark: colors.darkestBlue,
-            light: colors.lightBlue,
+            main: customColors.background.dark,
+            dark: customColors.background.paper,
+            light: customColors.background.light,
         },
         secondary: {
-            main: colors.slateBlue,
+            main: customColors.text.secondary,
         },
         background: {
-            default: colors.darkestBlue,
-            paper: colors.darkBlue,
+            default: customColors.background.dark,
+            paper: customColors.background.paper,
         },
         text: {
-            primary: colors.lightBlue,
-            secondary: colors.mediumBlue,
+            primary: customColors.text.primary,
+            secondary: customColors.text.secondary,
         },
     },
     typography: {

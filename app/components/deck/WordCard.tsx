@@ -4,33 +4,37 @@ import { memo } from "react";
 import { Word } from "@/lib/types";
 import { Box, Button, Typography, IconButton, Switch } from "@mui/material";
 import EditIcon from "@mui/icons-material/Edit";
+import { H4, H6, Span } from "../common/Headers";
 
 interface WordCardProps {
   word: Word;
   index: number;
   showTranslation: boolean;
-  onToggleTranslation: (index: number) => void;
   onEdit: (index: number, word: Word) => void;
+  onToggleTranslation?: (index: number) => void;
 }
 
 function WordCard({
   word,
   index,
   showTranslation,
-  onToggleTranslation,
   onEdit,
+  onToggleTranslation,
 }: WordCardProps) {
   return (
     <Button
       fullWidth
+      onClick={(e) => {
+        e.stopPropagation();
+        onEdit(index, word);
+      }}
       sx={{
         bgcolor: "background.paper",
         color: "text.primary",
-        border: 1,
-        borderColor: "secondary.main",
+        borderRadius: "10px",
+        borderColor: "background.default",
         p: 2.5,
         display: "flex",
-        justifyContent: "flex-start",
         alignItems: "center",
         gap: 2,
         textTransform: "none",
@@ -40,12 +44,86 @@ function WordCard({
         },
       }}
     >
+      {/* Word Content */}
+      <Box sx={{ flex: 1, textAlign: "left", alignSelf: "flex-start" }}>
+        {/* Word Header with Edit Button */}
+        <Box
+          sx={{
+            display: "flex",
+            flexDirection: "column",
+
+            // justifyContent: "space-between",
+            // alignItems: "center",
+            // mb: 0.5,
+          }}
+        >
+          <H4
+            variant="h4"
+            text={word.word}
+            textTransform={"capitalize"}
+            fontWeight={600}
+          />
+
+          {/* </Typography> */}
+          {/* <IconButton
+            size="small"
+            onClick={(e) => {
+              e.stopPropagation();
+              onEdit(index, word);
+            }}
+            sx={{
+              color: "text.secondary",
+              "&:hover": {
+                color: "primary.main",
+                bgcolor: "rgba(184, 202, 217, 0.1)",
+              },
+            }}
+          >
+            <EditIcon fontSize="small" />
+          </IconButton> */}
+        </Box>
+
+        {/* Translation Toggle */}
+        {/* <Box
+          sx={{
+            display: "flex",
+            alignItems: "center",
+            gap: 1,
+          }}
+        >
+          <Typography variant="body2" color="text.primary">
+            Show Translation
+          </Typography>
+          <Switch
+            checked={showTranslation}
+            onChange={() => onToggleTranslation(index)}
+            size="small"
+            sx={{
+              "& .MuiSwitch-switchBase.Mui-checked": {
+                color: "#B8CAD9",
+              },
+              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
+                backgroundColor: "#B8CAD9",
+              },
+            }}
+          />
+        </Box> */}
+
+        {/* Translation Display */}
+        {showTranslation && (
+          <H6
+            sx={{ mt: 1 }}
+            text={word.translation}
+            textTransform={"capitalize"}
+          />
+        )}
+      </Box>
       {/* Word Image */}
       <Box
         sx={{
-          width: 80,
-          height: 80,
-          bgcolor: "#4F6273",
+          width: 110,
+          height: 110,
+          bgcolor: "primary.light",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
@@ -69,72 +147,6 @@ function WordCard({
           <Box component="span" sx={{ fontSize: "2rem" }}>
             🖼️
           </Box>
-        )}
-      </Box>
-
-      {/* Word Content */}
-      <Box sx={{ flex: 1, textAlign: "left" }}>
-        {/* Word Header with Edit Button */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 0.5,
-          }}
-        >
-          <Typography variant="h6" fontWeight={600} color="text.primary">
-            {word.word}
-          </Typography>
-          <IconButton
-            size="small"
-            onClick={(e) => {
-              e.stopPropagation();
-              onEdit(index, word);
-            }}
-            sx={{
-              color: "text.secondary",
-              "&:hover": {
-                color: "primary.main",
-                bgcolor: "rgba(184, 202, 217, 0.1)",
-              },
-            }}
-          >
-            <EditIcon fontSize="small" />
-          </IconButton>
-        </Box>
-
-        {/* Translation Toggle */}
-        <Box
-          sx={{
-            display: "flex",
-            alignItems: "center",
-            gap: 1,
-          }}
-        >
-          <Typography variant="body2" color="text.primary">
-            Show Translation
-          </Typography>
-          <Switch
-            checked={showTranslation}
-            onChange={() => onToggleTranslation(index)}
-            size="small"
-            sx={{
-              "& .MuiSwitch-switchBase.Mui-checked": {
-                color: "#B8CAD9",
-              },
-              "& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track": {
-                backgroundColor: "#B8CAD9",
-              },
-            }}
-          />
-        </Box>
-
-        {/* Translation Display */}
-        {showTranslation && (
-          <Typography variant="body1" color="primary.main" sx={{ mt: 1 }}>
-            {word.translation}
-          </Typography>
         )}
       </Box>
     </Button>

@@ -2,6 +2,17 @@
  * VocApp Design System Color Palette
  * Centralized color constants for consistent theming across the application
  */
+export const customColors = {
+    background: {
+        dark: '#161616',
+        paper: '#454545',
+        light: '#F0EFF7',
+    },
+    text: {
+        primary: '#fefdfe',
+        secondary: '#f3f2f9',
+    },
+}
 
 export const colors = {
     // Primary palette

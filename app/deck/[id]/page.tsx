@@ -7,10 +7,11 @@ import { Word } from "@/lib/types";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
-import { Box, Container, Typography, IconButton } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
-import AddWordButton from "@/app/components/deck/AddWordButton";
-import WordCard from "@/app/components/deck/WordCard";
+import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
+import { getTranslation } from "@/lib/translations";
+import { CardsGridComponent } from "@/app/components/deck/CardsGrid";
 
 // Lazy load modal for code splitting
 const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
@@ -140,78 +141,12 @@ export default function DeckPage() {
       {/* Header */}
       <DeckHeaderBar onNavigateHome={() => router.push("/home")} />
 
-      {/* Main Content */}
-      <Container maxWidth="sm" sx={{ mt: 3 }}>
-        {/* Title Section */}
-        <Box
-          sx={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            mb: 3,
-          }}
-        >
-          <Typography
-            variant="h4"
-            fontWeight="bold"
-            color="text.primary"
-            sx={{ fontSize: "1.75rem" }}
-          >
-            {deck.name}
-          </Typography>
-          <Box sx={{ display: "flex", gap: 1 }}>
-            <IconButton
-              sx={{
-                bgcolor: "#B8CAD9",
-                width: 48,
-                height: 48,
-                "&:hover": { bgcolor: "#58748C" },
-              }}
-            >
-              <Box component="span" sx={{ fontSize: "1.5rem" }}>
-                👤
-              </Box>
-            </IconButton>
-            <IconButton
-              sx={{
-                bgcolor: "#B8CAD9",
-                width: 48,
-                height: 48,
-                "&:hover": { bgcolor: "#58748C" },
-              }}
-            >
-              <Box component="span" sx={{ fontSize: "1.5rem" }}>
-                🔄
-              </Box>
-            </IconButton>
-          </Box>
-        </Box>
-
-        {/* Add Word Button */}
-        <AddWordButton onAddWord={handleAddWord} />
-
-        {/* Words List */}
-        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
-          {deck.words.map((word, index) => (
-            <WordCard
-              key={index}
-              word={word}
-              index={index}
-              showTranslation={showTranslations[index] || false}
-              onToggleTranslation={toggleTranslation}
-              onEdit={handleEditWord}
-            />
-          ))}
-        </Box>
-
-        {deck.words.length === 0 && (
-          <Box sx={{ textAlign: "center", py: 6 }}>
-            <Typography color="secondary.main" variant="body1">
-              No words yet. Add your first word to start learning!
-            </Typography>
-          </Box>
-        )}
-      </Container>
+      <HeaderHolder
+        title={getTranslation("deck.stacks.personalStack")}
+        breadcrumbs={deck.name}
+        cards={deck.words}
+      />
+      <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
 
       {/* Add Word Modal */}
       <AddWordModal
