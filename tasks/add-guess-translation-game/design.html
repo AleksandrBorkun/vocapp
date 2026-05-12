@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=390, initial-scale=1">
+<title>Vocado — Guess Translation</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,200;9..144,300;9..144,400&display=swap" rel="stylesheet">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+:root {
+  --bg:#0f0d0a; --s1:#1a1713; --s2:#232018; --s3:#2c2920;
+  --fg:#ede8d4; --fg2:#9a8f79; --fg3:#5a5448;
+  --bdr:#2d2921; --acc:#c87c3b; --acc-b:rgba(200,124,59,0.14);
+  --grn:#52b86a; --grn-b:rgba(82,184,106,0.13); --red:#d44e3c; --red-b:rgba(212,78,60,0.13);
+  --ff-d:'Fraunces',Georgia,serif; --ff-b:-apple-system,BlinkMacSystemFont,'SF Pro Text',system-ui,sans-serif;
+}
+html,body{width:390px;height:844px;overflow:hidden;background:var(--bg);color:var(--fg);font-family:var(--ff-b);-webkit-font-smoothing:antialiased;}
+.screen{display:flex;flex-direction:column;height:844px;}
+.sb{height:59px;display:flex;align-items:flex-end;padding-bottom:10px;padding-inline:24px;position:relative;flex-shrink:0;}
+.sb-time{font-size:15px;font-weight:600;letter-spacing:-0.01em;}
+.sb-di{position:absolute;top:12px;left:50%;transform:translateX(-50%);width:126px;height:37px;background:#000;border-radius:20px;}
+.sb-icons{margin-inline-start:auto;display:flex;align-items:center;gap:6px;opacity:.85;}
+
+.game-hdr{padding:12px 24px 16px;display:flex;align-items:center;gap:12px;}
+.back-btn{width:36px;height:36px;background:var(--s2);border:1px solid var(--bdr);border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;border:none;color:var(--fg);}
+.game-title{font-family:var(--ff-d);font-size:24px;font-weight:300;letter-spacing:-0.02em;flex:1;}
+.attempts{display:flex;gap:4px;}
+.heart{font-size:18px;}
+.heart.empty{opacity:.2;filter:grayscale(1);}
+
+/* Progress dots */
+.progress-row{padding:0 24px 20px;display:flex;gap:5px;align-items:center;}
+.prog-dot{width:8px;height:8px;border-radius:4px;background:var(--s3);}
+.prog-dot.done{background:var(--grn);}
+.prog-dot.current{background:var(--acc);width:20px;}
+.prog-count{margin-inline-start:auto;font-size:13px;color:var(--fg2);}
+
+/* Flashcard */
+.card-area{flex:1;display:flex;flex-direction:column;align-items:center;padding:0 24px;}
+.flashcard{
+  width:100%;background:var(--s2);border:1px solid var(--bdr);
+  border-radius:24px;padding:40px 24px;text-align:center;margin-bottom:32px;
+  position:relative;min-height:180px;display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  box-shadow:0 8px 40px rgba(0,0,0,0.4);
+  cursor:pointer;transition:transform 0.15s;
+}
+.flashcard:active{transform:scale(0.98);}
+.card-eyebrow{font-size:11px;letter-spacing:0.08em;text-transform:uppercase;color:var(--fg3);margin-bottom:12px;}
+.card-word{font-family:var(--ff-d);font-size:56px;font-weight:300;letter-spacing:-0.03em;line-height:1;}
+.card-sub{font-size:13px;color:var(--fg3);margin-top:12px;}
+.card-flip-hint{
+  position:absolute;bottom:14px;right:16px;
+  font-size:12px;color:var(--fg3);display:flex;align-items:center;gap:4px;
+}
+
+/* Question */
+.question-label{font-size:14px;color:var(--fg2);margin-bottom:16px;text-align:center;}
+
+/* Answer grid */
+.answer-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;}
+.answer-btn{
+  background:var(--s2);border:1.5px solid var(--bdr);border-radius:16px;
+  padding:18px 12px;font-size:16px;font-weight:500;color:var(--fg);
+  font-family:var(--ff-b);cursor:pointer;text-align:center;
+  transition:all 0.15s;letter-spacing:-0.01em;
+}
+.answer-btn:active{transform:scale(0.97);}
+.answer-btn.wrong{background:var(--red-b);border-color:rgba(212,78,60,0.5);color:var(--red);}
+.answer-btn.correct{background:var(--grn-b);border-color:rgba(82,184,106,0.5);color:var(--grn);}
+.answer-btn.selected{border-color:var(--acc);background:var(--acc-b);}
+
+/* Feedback bar */
+.feedback-bar{
+  margin-top:auto;padding:16px 24px;border-top:1px solid var(--bdr);
+  display:flex;align-items:center;gap:12px;flex-shrink:0;
+  background:var(--red-b);border-top:1px solid rgba(212,78,60,0.2);
+}
+.feedback-icon{font-size:28px;}
+.feedback-text{flex:1;}
+.feedback-title{font-size:15px;font-weight:600;color:var(--red);margin-bottom:2px;}
+.feedback-sub{font-size:13px;color:var(--fg2);}
+.next-btn{background:var(--acc);color:#fff;border:none;border-radius:12px;padding:12px 20px;font-size:15px;font-weight:600;font-family:var(--ff-b);cursor:pointer;}
+
+.home-bar{height:34px;display:flex;align-items:center;justify-content:center;}
+.home-bar::after{content:'';width:134px;height:5px;background:rgba(237,232,212,.22);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="screen" data-od-id="translate-screen">
+
+  <div class="sb">
+    <span class="sb-time">9:41</span>
+    <div class="sb-di"></div>
+    <div class="sb-icons">
+      <svg width="17" height="12" viewBox="0 0 17 12" fill="currentColor"><rect x="0" y="3" width="3" height="9" rx="1"/><rect x="4.5" y="2" width="3" height="10" rx="1"/><rect x="9" y="0.5" width="3" height="11.5" rx="1"/></svg>
+      <svg width="25" height="12" viewBox="0 0 25 12" fill="currentColor"><rect x="0" y="1" width="22" height="10" rx="3" stroke="currentColor" stroke-width="1" fill="none" opacity="0.35"/><rect x="22.5" y="3.5" width="2" height="5" rx="1" opacity="0.4"/><rect x="1.5" y="2.5" width="16" height="7" rx="2"/></svg>
+    </div>
+  </div>
+
+  <div class="game-hdr">
+    <button class="back-btn">←</button>
+    <div class="game-title">Guess Translation</div>
+    <div class="attempts">
+      <span class="heart">❤️</span>
+      <span class="heart empty">❤️</span>
+      <span class="heart empty">❤️</span>
+    </div>
+  </div>
+
+  <!-- Progress -->
+  <div class="progress-row">
+    <div class="prog-dot done"></div>
+    <div class="prog-dot done"></div>
+    <div class="prog-dot current"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <div class="prog-dot"></div>
+    <span class="prog-count">Card 3 / 10</span>
+  </div>
+
+  <!-- Card area -->
+  <div class="card-area">
+    <div class="flashcard" data-od-id="flashcard" id="flashcard">
+      <div class="card-eyebrow">Spanish → English</div>
+      <div class="card-word">Perro</div>
+      <div class="card-sub">from deck: Travel Spanish</div>
+      <div class="card-flip-hint">tap to flip ↻</div>
+    </div>
+
+    <p class="question-label">What does <strong style="color:var(--fg)">"Perro"</strong> mean?</p>
+
+    <div class="answer-grid" data-od-id="answer-grid">
+      <button class="answer-btn correct" data-correct="true" id="opt-dog">Dog</button>
+      <button class="answer-btn wrong" id="opt-cat">Cat</button>
+      <button class="answer-btn" id="opt-horse">Horse</button>
+      <button class="answer-btn" id="opt-bird">Bird</button>
+    </div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback-bar" data-od-id="feedback-bar" id="feedback">
+    <div class="feedback-icon">😬</div>
+    <div class="feedback-text">
+      <div class="feedback-title">Not quite!</div>
+      <div class="feedback-sub">"Perro" means <strong style="color:var(--fg)">Dog</strong>. Keep going!</div>
+    </div>
+    <button class="next-btn" id="next-btn">Next →</button>
+  </div>
+
+  <div class="home-bar"></div>
+</div>
+
+<script>
+const CORRECT = 'opt-dog';
+let answered = true; // already in answered state for prototype
+
+const opts = document.querySelectorAll('.answer-btn');
+const feedback = document.getElementById('feedback');
+
+opts.forEach(btn => {
+  btn.addEventListener('click', () => {
+    if (answered) return;
+    answered = true;
+    if (btn.id === CORRECT) {
+      btn.classList.add('correct');
+      feedback.style.background = 'rgba(82,184,106,0.1)';
+      feedback.style.borderTopColor = 'rgba(82,184,106,0.2)';
+      feedback.querySelector('.feedback-icon').textContent = '🎉';
+      feedback.querySelector('.feedback-title').style.color = 'var(--grn)';
+      feedback.querySelector('.feedback-title').textContent = 'Correct!';
+    } else {
+      btn.classList.add('wrong');
+      document.getElementById(CORRECT).classList.add('correct');
+    }
+  });
+});
+
+// Flip card
+document.getElementById('flashcard').addEventListener('click', () => {
+  const word = document.querySelector('.card-word');
+  word.style.transition = 'opacity 0.2s';
+  word.style.opacity = '0';
+  setTimeout(() => {
+    const showing = word.dataset.showing || 'es';
+    if (showing === 'es') {
+      word.textContent = 'Dog';
+      document.querySelector('.card-eyebrow').textContent = 'English translation';
+      word.dataset.showing = 'en';
+    } else {
+      word.textContent = 'Perro';
+      document.querySelector('.card-eyebrow').textContent = 'Spanish → English';
+      word.dataset.showing = 'es';
+    }
+    word.style.opacity = '1';
+  }, 200);
+});
+</script>
+</body>
+</html>

@@ -3,6 +3,15 @@ import { Deck, Word } from '@/lib/types';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
 
+const MIN_ACCURACY = 0;
+const MAX_ACCURACY = 1;
+const CORRECT_ANSWER_DELTA = 0.05;
+const WRONG_ANSWER_DELTA = 0.02;
+
+function clampAccuracy(value: number) {
+    return Math.min(MAX_ACCURACY, Math.max(MIN_ACCURACY, value));
+}
+
 export interface UseWordsReturn {
     deck: Deck | null;
     loading: boolean;
@@ -175,8 +184,7 @@ export function useWords(): UseWordsReturn {
     );
 
     /**
-     * Update word accuracy based on study performance
-     * Uses a weighted average to gradually update accuracy
+     * Update word accuracy based on guess-translation performance.
      */
     const updateWordAccuracy = useCallback(
         async (deckId: string, wordIndex: number, isCorrect: boolean) => {
@@ -188,8 +196,15 @@ export function useWords(): UseWordsReturn {
                 setError(null);
 
                 const word = deck.words[wordIndex];
-                // Weighted average: 80% old accuracy, 20% new result
-                const newAccuracy = word.accuracy * 0.8 + (isCorrect ? 1 : 0) * 0.2;
+
+                if (!word) {
+                    throw new Error('Word not found');
+                }
+
+                const accuracyDelta = isCorrect
+                    ? CORRECT_ANSWER_DELTA
+                    : -WRONG_ANSWER_DELTA;
+                const newAccuracy = clampAccuracy(word.accuracy + accuracyDelta);
 
                 await updateWord(deckId, wordIndex, { accuracy: newAccuracy });
             } catch (err) {
