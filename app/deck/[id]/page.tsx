@@ -7,7 +7,7 @@ import { Word } from "@/lib/types";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
-import { Box, Typography } from "@mui/material";
+import { Box, Button, Typography } from "@mui/material";
 import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
 import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
 import { getTranslation } from "@/lib/translations";
@@ -146,6 +146,22 @@ export default function DeckPage() {
         breadcrumbs={deck.name}
         cards={deck.words}
       />
+      <Box
+        sx={{
+          px: { xs: 2, sm: 3 },
+          pt: 3,
+          display: "flex",
+          justifyContent: "flex-end",
+        }}
+      >
+        <Button
+          onClick={() => router.push(`/deck/${deckId}/guess-translation`)}
+          variant="contained"
+          sx={{ minWidth: { xs: "100%", sm: 220 } }}
+        >
+          {getTranslation("deck.actions.guessTranslation")}
+        </Button>
+      </Box>
       <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
 
       {/* Add Word Modal */}
