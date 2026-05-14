@@ -6,6 +6,7 @@ const translation: Record<Path, string> = {
   "deck.cards": "Cards",
   "deck.actions.guessTranslation": "Guess Translation",
   "deck.actions.matchTranslation": "Match Translation",
+  "deck.actions.buildWord": "Build a Word",
   "guessTranslation.title": "Guess Translation",
   "guessTranslation.translationLabel": "Translation",
   "guessTranslation.fromDeck": "from deck",
@@ -41,6 +42,24 @@ const translation: Record<Path, string> = {
   "matchTranslation.emptyDeck":
     "Add a few words with translations to this deck before starting the game.",
   "matchTranslation.backToDeck": "Back to deck",
+  "buildWord.title": "Build a Word",
+  "buildWord.translateTo": "Translate to",
+  "buildWord.instruction": "Drag or tap letters to spell the word",
+  "buildWord.answerLabel": "Your answer",
+  "buildWord.trayLabel": "Available letters - tap to place",
+  "buildWord.hint": "Hint",
+  "buildWord.hintUsed": "Hint used",
+  "buildWord.check": "Check",
+  "buildWord.next": "Next",
+  "buildWord.nextRound": "Next Round",
+  "buildWord.goHome": "Go Home",
+  "buildWord.wellDone": "Well done!",
+  "buildWord.correctAnswers": "Correct!",
+  "buildWord.tryAgain": "Try again.",
+  "buildWord.keepGoing": "Keep going!",
+  "buildWord.emptyDeck":
+    "Add a few words with translations to this deck before starting the game.",
+  "buildWord.backToDeck": "Back to deck",
 };
 
 export default translation;
