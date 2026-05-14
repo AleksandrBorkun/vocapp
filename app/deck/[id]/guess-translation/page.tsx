@@ -24,15 +24,15 @@ import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
 import { getTranslation } from "@/lib/translations";
 import { Word } from "@/lib/types";
+import {
+  IndexedWord,
+  selectStudyWords,
+  shuffleArray,
+} from "@/lib/utils/studyGame";
 
 const ROUND_SIZE = 10;
 const ANSWER_OPTIONS = 4;
 const SERIF_FONT = '"Fraunces", Georgia, serif';
-
-type IndexedWord = Word & {
-  deckIndex: number;
-};
-
 type GameCard = {
   deckIndex: number;
   word: string;
@@ -40,20 +40,6 @@ type GameCard = {
   example?: string;
   options: string[];
 };
-
-function shuffleArray<T>(items: T[]) {
-  const shuffled = [...items];
-
-  for (let index = shuffled.length - 1; index > 0; index -= 1) {
-    const randomIndex = Math.floor(Math.random() * (index + 1));
-    [shuffled[index], shuffled[randomIndex]] = [
-      shuffled[randomIndex],
-      shuffled[index],
-    ];
-  }
-
-  return shuffled;
-}
 
 function buildAnswerOptions(correctTranslation: string, words: IndexedWord[]) {
   const distinctTranslations = Array.from(
@@ -77,36 +63,9 @@ function buildGameRound(words: Word[]) {
   const indexedWords = words
     .map((word, index) => ({ ...word, deckIndex: index }))
     .filter((word) => word.word.trim() && word.translation.trim());
+  const selectedWords = selectStudyWords(words, ROUND_SIZE);
 
-  const selectedWords: IndexedWord[] = [];
-  const newWords = shuffleArray(
-    indexedWords.filter((word) => word.accuracy < 0.4),
-  );
-  const learningWords = shuffleArray(
-    indexedWords.filter((word) => word.accuracy >= 0.4 && word.accuracy < 0.8),
-  );
-  const repetitionWords = shuffleArray(
-    indexedWords.filter((word) => word.accuracy >= 0.8),
-  );
-
-  selectedWords.push(...newWords.slice(0, 4));
-  selectedWords.push(...learningWords.slice(0, 4));
-  selectedWords.push(...repetitionWords.slice(0, 2));
-
-  if (selectedWords.length < ROUND_SIZE) {
-    const selectedIndices = new Set(
-      selectedWords.map((word) => word.deckIndex),
-    );
-    const remainingWords = shuffleArray(
-      indexedWords.filter((word) => !selectedIndices.has(word.deckIndex)),
-    );
-
-    selectedWords.push(
-      ...remainingWords.slice(0, ROUND_SIZE - selectedWords.length),
-    );
-  }
-
-  return shuffleArray(selectedWords.slice(0, ROUND_SIZE)).map((word) => ({
+  return selectedWords.map((word) => ({
     deckIndex: word.deckIndex,
     word: word.word,
     translation: word.translation,

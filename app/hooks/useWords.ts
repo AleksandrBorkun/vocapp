@@ -21,6 +21,7 @@ export interface UseWordsReturn {
     addWord: (deckId: string, word: Word) => Promise<void>;
     deleteWord: (deckId: string, wordIndex: number) => Promise<void>;
     updateWordAccuracy: (deckId: string, wordIndex: number, isCorrect: boolean) => Promise<void>;
+    updateWordAccuracies: (deckId: string, updates: Array<{ wordIndex: number; delta: number }>) => Promise<void>;
 }
 
 /**
@@ -35,6 +36,25 @@ export function useWords(): UseWordsReturn {
     const [deck, setDeck] = useState<Deck | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+
+    const updateWordsSnapshot = useCallback(
+        async (deckId: string, updatedWords: Word[]) => {
+            if (!db || !deck) {
+                throw new Error('Firestore not initialized or deck not loaded');
+            }
+
+            const deckRef = doc(db, 'decks', deckId);
+            await updateDoc(deckRef, {
+                words: updatedWords,
+            });
+
+            setDeck({
+                ...deck,
+                words: updatedWords,
+            });
+        },
+        [deck]
+    );
 
     /**
      * Load a specific deck by ID
@@ -95,16 +115,7 @@ export function useWords(): UseWordsReturn {
                     ...updatedWord,
                 };
 
-                const deckRef = doc(db, 'decks', deckId);
-                await updateDoc(deckRef, {
-                    words: updatedWords,
-                });
-
-                // Update local state
-                setDeck({
-                    ...deck,
-                    words: updatedWords,
-                });
+                await updateWordsSnapshot(deckId, updatedWords);
             } catch (err) {
                 console.error('Error updating word:', err);
                 const errorMessage = err instanceof Error ? err.message : 'Failed to update word';
@@ -112,7 +123,7 @@ export function useWords(): UseWordsReturn {
                 throw new Error(errorMessage);
             }
         },
-        [deck]
+        [deck, updateWordsSnapshot]
     );
 
     /**
@@ -217,6 +228,55 @@ export function useWords(): UseWordsReturn {
         [deck, updateWord]
     );
 
+    const updateWordAccuracies = useCallback(
+        async (deckId: string, updates: Array<{ wordIndex: number; delta: number }>) => {
+            if (!db || !deck) {
+                throw new Error('Firestore not initialized or deck not loaded');
+            }
+
+            if (updates.length === 0) {
+                return;
+            }
+
+            try {
+                setError(null);
+
+                const mergedDeltas = new Map<number, number>();
+
+                updates.forEach(({ wordIndex, delta }) => {
+                    const word = deck.words[wordIndex];
+
+                    if (!word) {
+                        throw new Error('Word not found');
+                    }
+
+                    mergedDeltas.set(wordIndex, (mergedDeltas.get(wordIndex) ?? 0) + delta);
+                });
+
+                const updatedWords = deck.words.map((word, index) => {
+                    const delta = mergedDeltas.get(index);
+
+                    if (delta === undefined) {
+                        return word;
+                    }
+
+                    return {
+                        ...word,
+                        accuracy: clampAccuracy(word.accuracy + delta),
+                    };
+                });
+
+                await updateWordsSnapshot(deckId, updatedWords);
+            } catch (err) {
+                console.error('Error updating word accuracies:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Failed to update accuracies';
+                setError(errorMessage);
+                throw new Error(errorMessage);
+            }
+        },
+        [deck, updateWordsSnapshot]
+    );
+
     return {
         deck,
         loading,
@@ -226,5 +286,6 @@ export function useWords(): UseWordsReturn {
         addWord,
         deleteWord,
         updateWordAccuracy,
+        updateWordAccuracies,
     };
 }
