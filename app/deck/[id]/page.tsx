@@ -7,7 +7,7 @@ import { Word } from "@/lib/types";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Stack, Typography } from "@mui/material";
 import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
 import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
 import { getTranslation } from "@/lib/translations";
@@ -154,13 +154,26 @@ export default function DeckPage() {
           justifyContent: "flex-end",
         }}
       >
-        <Button
-          onClick={() => router.push(`/deck/${deckId}/guess-translation`)}
-          variant="contained"
-          sx={{ minWidth: { xs: "100%", sm: 220 } }}
+        <Stack
+          direction={{ xs: "column", sm: "row" }}
+          spacing={1.5}
+          sx={{ width: { xs: "100%", sm: "auto" } }}
         >
-          {getTranslation("deck.actions.guessTranslation")}
-        </Button>
+          <Button
+            onClick={() => router.push(`/deck/${deckId}/guess-translation`)}
+            variant="contained"
+            sx={{ minWidth: { xs: "100%", sm: 220 } }}
+          >
+            {getTranslation("deck.actions.guessTranslation")}
+          </Button>
+          <Button
+            onClick={() => router.push(`/deck/${deckId}/match-translation`)}
+            variant="contained"
+            sx={{ minWidth: { xs: "100%", sm: 220 } }}
+          >
+            {getTranslation("deck.actions.matchTranslation")}
+          </Button>
+        </Stack>
       </Box>
       <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
 
