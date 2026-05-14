@@ -173,6 +173,13 @@ export default function DeckPage() {
           >
             {getTranslation("deck.actions.matchTranslation")}
           </Button>
+          <Button
+            onClick={() => router.push(`/deck/${deckId}/build-word-game`)}
+            variant="contained"
+            sx={{ minWidth: { xs: "100%", sm: 220 } }}
+          >
+            {getTranslation("deck.actions.buildWord")}
+          </Button>
         </Stack>
       </Box>
       <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
