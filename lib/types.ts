@@ -1,8 +1,18 @@
+export interface LanguageQuestProgress {
+    totalXp: number;
+    streak: number;
+    lastCompletedOn?: string | null;
+    updatedAt?: string | null;
+}
+
+export type QuestProgressByLanguage = Record<string, LanguageQuestProgress>;
+
 export interface User {
     vocabIDs: string[];
     nativeLanguage: string; // language code e.g. "en", "es", "fr"
     name: string;
     tier: "free" | "paid";
+    questProgress?: QuestProgressByLanguage;
 }
 
 export interface Deck {

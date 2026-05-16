@@ -12,6 +12,7 @@ import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
 import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
 import { getTranslation } from "@/lib/translations";
 import { CardsGridComponent } from "@/app/components/deck/CardsGrid";
+import { setActiveDeckIdCookie } from "@/lib/utils/activeDeckCookie";
 
 // Lazy load modal for code splitting
 const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
@@ -50,6 +51,12 @@ export default function DeckPage() {
       loadDeck(deckId);
     }
   }, [deckId, user, loadDeck]);
+
+  useEffect(() => {
+    if (deck?.id) {
+      setActiveDeckIdCookie(deck.id);
+    }
+  }, [deck?.id]);
 
   const toggleTranslation = useCallback((index: number) => {
     setShowTranslations((prev) => ({

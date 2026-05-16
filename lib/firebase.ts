@@ -1,7 +1,7 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
 import { doc, Firestore, getDoc, getFirestore, setDoc } from 'firebase/firestore';
-import { User } from './types';
+import { QuestProgressByLanguage, User } from './types';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -42,6 +42,41 @@ if (typeof window !== 'undefined') {
 
 export { app, auth, db };
 
+function normalizeQuestProgress(
+  questProgress: User['questProgress'],
+): QuestProgressByLanguage {
+  if (!questProgress) {
+    return {};
+  }
+
+  return Object.entries(questProgress).reduce<QuestProgressByLanguage>(
+    (normalized, [languageCode, progress]) => {
+      normalized[languageCode] = {
+        totalXp: typeof progress?.totalXp === 'number' ? progress.totalXp : 0,
+        streak: typeof progress?.streak === 'number' ? progress.streak : 0,
+        lastCompletedOn: progress?.lastCompletedOn ?? null,
+        updatedAt: progress?.updatedAt ?? null,
+      };
+
+      return normalized;
+    },
+    {},
+  );
+}
+
+function normalizeUserDocument(data: Partial<User>): User {
+  return {
+    vocabIDs: Array.isArray(data.vocabIDs)
+      ? data.vocabIDs.filter((deckId): deckId is string => typeof deckId === 'string')
+      : [],
+    nativeLanguage:
+      typeof data.nativeLanguage === 'string' ? data.nativeLanguage : '',
+    name: typeof data.name === 'string' ? data.name : '',
+    tier: data.tier === 'paid' ? 'paid' : 'free',
+    questProgress: normalizeQuestProgress(data.questProgress),
+  };
+}
+
 /**
  * Creates a user document in Firestore after first login
  */
@@ -57,7 +92,8 @@ export async function createUserDocument(
     vocabIDs: [],
     nativeLanguage,
     name,
-    tier: 'free'
+    tier: 'free',
+    questProgress: {},
   };
 
   await setDoc(userRef, userData);
@@ -74,8 +110,29 @@ export async function getUserDocument(userId: string): Promise<User | null> {
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
-    return userSnap.data() as User;
+    const data = userSnap.data() as Partial<User>;
+    const normalizedUser = normalizeUserDocument(data);
+
+    if (data.questProgress === undefined) {
+      await setDoc(
+        userRef,
+        {
+          questProgress: normalizedUser.questProgress,
+        },
+        { merge: true },
+      );
+    }
+
+    return normalizedUser;
   }
 
   return null;
+}
+
+export async function getUserQuestProgress(
+  userId: string,
+): Promise<QuestProgressByLanguage> {
+  const userDoc = await getUserDocument(userId);
+
+  return userDoc?.questProgress ?? {};
 }
