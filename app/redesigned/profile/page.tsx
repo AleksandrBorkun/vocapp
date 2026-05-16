@@ -357,7 +357,7 @@ export default function RedesignedProfilePage() {
           }
           break;
         case "add":
-          router.push("/home");
+          router.push("/redesigned/add-word");
           break;
         case "profile":
         default:

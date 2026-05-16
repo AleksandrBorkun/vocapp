@@ -30,5 +30,7 @@ export interface Word {
     translation: string;
     example?: string; // Sentence where word is used
     picture?: string; // Image URL from Pixabay
+    pronunciation?: string;
+    contextNote?: string;
     accuracy: number; // Number from 0 to 1, shows how often you guess correctly
 }

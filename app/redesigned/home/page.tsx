@@ -72,7 +72,7 @@ export default function RedesignedHomePage() {
           }
           break;
         case "add":
-          router.push("/home");
+          router.push("/redesigned/add-word");
           break;
         case "profile":
           router.push("/redesigned/profile");

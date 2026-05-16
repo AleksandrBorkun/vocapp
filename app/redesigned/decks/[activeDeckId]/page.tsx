@@ -52,7 +52,7 @@ export default function RedesignedDeckPage() {
           router.push("/redesigned/home");
           break;
         case "add":
-          router.push("/home");
+          router.push("/redesigned/add-word");
           break;
         case "profile":
           router.push("/redesigned/profile");
