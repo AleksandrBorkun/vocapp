@@ -8,7 +8,10 @@ import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedTheme
 import QuestsHomeScreen from "@/app/components/redesigned/quests/QuestsHomeScreen";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useDecks } from "@/app/hooks/useDecks";
-import { useRedesignedHomeDashboard } from "@/app/hooks/useRedesignedHomeDashboard";
+import {
+  RedesignedTabId,
+  useRedesignedHomeDashboard,
+} from "@/app/hooks/useRedesignedHomeDashboard";
 
 function getQuestRoute(deckId: string, questId: string) {
   switch (questId) {
@@ -55,6 +58,24 @@ export default function RedesignedHomePage() {
     [dashboard.activeDeck, router],
   );
 
+  const handleTabSelect = useCallback(
+    (tabId: string) => {
+      switch (tabId as RedesignedTabId) {
+        case "quests":
+          router.push("/redesigned/home");
+          break;
+        case "decks":
+          if (dashboard.activeDeck) {
+            router.push(`/redesigned/decks/${dashboard.activeDeck.id}`);
+          }
+          break;
+        default:
+          break;
+      }
+    },
+    [dashboard.activeDeck, router],
+  );
+
   if (loading) {
     return <FullPageLoading />;
   }
@@ -72,6 +93,7 @@ export default function RedesignedHomePage() {
         completed={dashboard.completed}
         tabs={dashboard.tabs}
         onQuestStart={handleQuestStart}
+        onTabSelect={handleTabSelect}
         emptyQuestMessage={dashboard.emptyQuestMessage}
         emptyCompletedMessage={dashboard.emptyCompletedMessage}
       />

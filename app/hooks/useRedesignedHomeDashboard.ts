@@ -59,12 +59,23 @@ const QUESTS: QuestCardViewModel[] = [
     },
 ];
 
-const TABS: BottomTabItemViewModel[] = [
-    { id: "quests", label: "Quests", icon: "⚡", active: true },
+const TABS: Omit<BottomTabItemViewModel, "active">[] = [
+    { id: "quests", label: "Quests", icon: "⚡" },
     { id: "decks", label: "Decks", icon: "🃏" },
     { id: "add", label: "Add", icon: "➕" },
     { id: "profile", label: "Profile", icon: "👤" },
 ];
+
+export type RedesignedTabId = "quests" | "decks" | "add" | "profile";
+
+export function getRedesignedTabs(
+    activeTab: RedesignedTabId,
+): BottomTabItemViewModel[] {
+    return TABS.map((tab) => ({
+        ...tab,
+        active: tab.id === activeTab,
+    }));
+}
 
 export interface RedesignedHomeDashboardState {
     loading: boolean;
@@ -256,7 +267,7 @@ export function useRedesignedHomeDashboard(
         progress: toProgressViewModel(languageProgress),
         quests,
         completed: [],
-        tabs: TABS,
+        tabs: getRedesignedTabs("quests"),
         emptyQuestMessage: activeDeck
             ? null
             : "Create or open a deck to start today's quests.",
