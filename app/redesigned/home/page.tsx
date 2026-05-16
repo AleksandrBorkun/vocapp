@@ -67,7 +67,15 @@ export default function RedesignedHomePage() {
         case "decks":
           if (dashboard.activeDeck) {
             router.push(`/redesigned/decks/${dashboard.activeDeck.id}`);
+          } else {
+            router.push("/home");
           }
+          break;
+        case "add":
+          router.push("/home");
+          break;
+        case "profile":
+          router.push("/redesigned/profile");
           break;
         default:
           break;

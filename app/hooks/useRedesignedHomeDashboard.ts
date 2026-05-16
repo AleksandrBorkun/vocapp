@@ -107,7 +107,7 @@ function formatGreeting(name: string, now: Date) {
     return `${salutation}, ${safeName} 👋`;
 }
 
-function getLevelTitle(level: number) {
+export function getLevelTitle(level: number) {
     if (level <= 2) {
         return "Beginner";
     }
@@ -127,7 +127,9 @@ function getLevelTitle(level: number) {
     return "Expert";
 }
 
-function toProgressViewModel(progress: LanguageQuestProgress): XpProgressViewModel {
+export function toProgressViewModel(
+    progress: LanguageQuestProgress,
+): XpProgressViewModel {
     const totalXp = Math.max(progress.totalXp, 0);
     const level = Math.floor(totalXp / XP_PER_LEVEL) + 1;
     const currentXp = totalXp % XP_PER_LEVEL;

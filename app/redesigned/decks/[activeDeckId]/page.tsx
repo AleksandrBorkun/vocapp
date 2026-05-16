@@ -51,6 +51,12 @@ export default function RedesignedDeckPage() {
         case "quests":
           router.push("/redesigned/home");
           break;
+        case "add":
+          router.push("/home");
+          break;
+        case "profile":
+          router.push("/redesigned/profile");
+          break;
         case "decks":
         default:
           break;
