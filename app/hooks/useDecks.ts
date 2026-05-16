@@ -200,6 +200,23 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
                 throw new Error('Firebase not initialized');
             }
 
+            const trimmedWord = word.word.trim();
+            const trimmedTranslation = word.translation.trim();
+
+            if (!deckId.trim()) {
+                throw new Error('Deck ID is required');
+            }
+
+            if (!trimmedWord || !trimmedTranslation || typeof word.accuracy !== 'number') {
+                throw new Error('Word, translation, and accuracy are required');
+            }
+
+            const normalizedWord: Word = {
+                ...word,
+                word: trimmedWord,
+                translation: trimmedTranslation,
+            };
+
             try {
                 setError(null);
 
@@ -212,7 +229,7 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
                 }
 
                 // Add the word to the words array
-                const updatedWords = [...deck.words, word];
+                const updatedWords = [...deck.words, normalizedWord];
                 await updateDoc(deckRef, {
                     words: updatedWords,
                 });

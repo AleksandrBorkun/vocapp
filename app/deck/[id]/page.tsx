@@ -1,56 +1,43 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
-import dynamic from "next/dynamic";
-import { useRouter, useParams } from "next/navigation";
-import { Word } from "@/lib/types";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { Box, Typography } from "@mui/material";
+import ErrorState from "@/app/components/common/ErrorState";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
+import DeckDetailScreen from "@/app/components/redesigned/decks/DeckDetailScreen";
+import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedThemeProvider";
 import { useAuth } from "@/app/hooks/useAuth";
+import {
+  RedesignedTabId,
+  getRedesignedTabs,
+} from "@/app/hooks/useRedesignedHomeDashboard";
 import { useWords } from "@/app/hooks/useWords";
-import { Box, Button, Stack, Typography } from "@mui/material";
-import DeckHeaderBar from "@/app/components/deck/DeckHeaderBar";
-import { HeaderHolder } from "@/app/components/deck/HeaderHolder";
-import { getTranslation } from "@/lib/translations";
-import { CardsGridComponent } from "@/app/components/deck/CardsGrid";
+import { redesignedPalette } from "@/lib/redesigned/tokens";
 import { setActiveDeckIdCookie } from "@/lib/utils/activeDeckCookie";
-
-// Lazy load modal for code splitting
-const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
-  loading: () => <FullPageLoading />,
-});
 
 export default function DeckPage() {
   const router = useRouter();
   const params = useParams();
   const deckId = params.id as string;
+  const [searchValue, setSearchValue] = useState("");
 
-  // Use custom hooks
-  const { user, loading: authLoading } = useAuth({
-    requireAuth: true,
-  });
   const {
-    deck,
-    loading: deckLoading,
-    loadDeck,
-    updateWord: updateWordInDeck,
-    addWord,
-  } = useWords();
+    user,
+    loading: authLoading,
+    error: authError,
+  } = useAuth({
+    requireAuth: true,
+    requireOnboarding: true,
+    redirectTo: "/login",
+  });
+  const { deck, loading: deckLoading, error: deckError, loadDeck } = useWords();
 
-  const [showTranslations, setShowTranslations] = useState<{
-    [key: number]: boolean;
-  }>({});
-  const [showAddWordModal, setShowAddWordModal] = useState(false);
-  const [editingWordIndex, setEditingWordIndex] = useState<number | null>(null);
-  const [editingWord, setEditingWord] = useState<Word | null>(null);
-
-  const loading = authLoading || deckLoading;
-
-  // Load deck when component mounts or deckId changes
   useEffect(() => {
     if (user && deckId) {
       loadDeck(deckId);
     }
-  }, [deckId, user, loadDeck]);
+  }, [deckId, loadDeck, user]);
 
   useEffect(() => {
     if (deck?.id) {
@@ -58,150 +45,89 @@ export default function DeckPage() {
     }
   }, [deck?.id]);
 
-  const toggleTranslation = useCallback((index: number) => {
-    setShowTranslations((prev) => ({
-      ...prev,
-      [index]: !prev[index],
-    }));
-  }, []);
-
-  const handleAddWord = useCallback(() => {
-    setShowAddWordModal(true);
-  }, []);
-
-  const handleEditWord = useCallback((index: number, word: Word) => {
-    setEditingWordIndex(index);
-    setEditingWord(word);
-    setShowAddWordModal(true);
-  }, []);
-
-  const handleCloseModal = useCallback(() => {
-    setEditingWordIndex(null);
-    setEditingWord(null);
-    setShowAddWordModal(false);
-  }, []);
-
-  const handleSaveWord = useCallback(
-    async (
-      word: string,
-      translation: string,
-      example: string,
-      picture?: string,
-      index?: number,
-    ) => {
-      if (!deck) return;
-
-      try {
-        if (index !== undefined && index !== null) {
-          // Edit existing word
-          await updateWordInDeck(deckId, index, {
-            word,
-            translation,
-            example,
-            picture,
-          });
-        } else {
-          // Add new word
-          await addWord(deckId, {
-            word,
-            translation,
-            example,
-            picture,
-            accuracy: 0,
-          });
-        }
-      } catch (error) {
-        console.error("Error saving word:", error);
+  const handleTabSelect = useCallback(
+    (tabId: string) => {
+      switch (tabId as RedesignedTabId) {
+        case "quests":
+          router.push("/home");
+          break;
+        case "add":
+          router.push("/add-word");
+          break;
+        case "profile":
+          router.push("/profile");
+          break;
+        case "decks":
+        default:
+          break;
       }
     },
-    [deck, deckId, updateWordInDeck, addWord],
+    [router],
   );
+
+  const filteredWords = useMemo(() => {
+    if (!deck) {
+      return [];
+    }
+
+    const normalizedSearch = searchValue.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return deck.words;
+    }
+
+    return deck.words.filter((word) => {
+      const source = word.word.toLowerCase();
+      const target = word.translation.toLowerCase();
+
+      return (
+        source.includes(normalizedSearch) || target.includes(normalizedSearch)
+      );
+    });
+  }, [deck, searchValue]);
+
+  const loading = authLoading || deckLoading;
+  const error = authError || deckError;
 
   if (loading) {
     return <FullPageLoading />;
   }
 
+  if (error) {
+    return <ErrorState error={error} showBackToLogin={false} />;
+  }
+
   if (!deck) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          bgcolor: "background.default",
-        }}
-      >
-        <Typography color="text.primary">Deck not found</Typography>
-      </Box>
+      <RedesignedThemeProvider>
+        <Box
+          sx={{
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            bgcolor: redesignedPalette.canvas,
+            px: 3,
+          }}
+        >
+          <Typography sx={{ color: redesignedPalette.text.primary }}>
+            Deck not found.
+          </Typography>
+        </Box>
+      </RedesignedThemeProvider>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        pb: 4,
-      }}
-    >
-      {/* Header */}
-      <DeckHeaderBar onNavigateHome={() => router.push("/home")} />
-
-      <HeaderHolder
-        title={getTranslation("deck.stacks.personalStack")}
-        breadcrumbs={deck.name}
-        cards={deck.words}
+    <RedesignedThemeProvider>
+      <DeckDetailScreen
+        deck={deck}
+        visibleWords={filteredWords}
+        tabs={getRedesignedTabs("decks")}
+        searchValue={searchValue}
+        onSearchChange={setSearchValue}
+        onTabSelect={handleTabSelect}
       />
-      <Box
-        sx={{
-          px: { xs: 2, sm: 3 },
-          pt: 3,
-          display: "flex",
-          justifyContent: "flex-end",
-        }}
-      >
-        <Stack
-          direction={{ xs: "column", sm: "row" }}
-          spacing={1.5}
-          sx={{ width: { xs: "100%", sm: "auto" } }}
-        >
-          <Button
-            onClick={() => router.push(`/deck/${deckId}/guess-translation`)}
-            variant="contained"
-            sx={{ minWidth: { xs: "100%", sm: 220 } }}
-          >
-            {getTranslation("deck.actions.guessTranslation")}
-          </Button>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}/match-translation`)}
-            variant="contained"
-            sx={{ minWidth: { xs: "100%", sm: 220 } }}
-          >
-            {getTranslation("deck.actions.matchTranslation")}
-          </Button>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}/build-word-game`)}
-            variant="contained"
-            sx={{ minWidth: { xs: "100%", sm: 220 } }}
-          >
-            {getTranslation("deck.actions.buildWord")}
-          </Button>
-        </Stack>
-      </Box>
-      <CardsGridComponent cards={deck.words} handleEditWord={handleEditWord} />
-
-      {/* Add Word Modal */}
-      <AddWordModal
-        open={showAddWordModal}
-        onClose={handleCloseModal}
-        onSave={handleSaveWord}
-        sourceLang={deck?.study}
-        targetLang={deck?.language}
-        editMode={editingWordIndex !== null}
-        initialWord={editingWord || undefined}
-        wordIndex={editingWordIndex ?? undefined}
-      />
-    </Box>
+    </RedesignedThemeProvider>
   );
 }

@@ -175,7 +175,45 @@ function createScanWords(wordBoxes: OcrWordBox[], translations: string[]) {
   }));
 }
 
-export default function RedesignedAddWordPage() {
+function buildManualWordPayload({
+  studyWord,
+  nativeTranslation,
+  pronunciation,
+  contextNote,
+}: {
+  studyWord: string;
+  nativeTranslation: string;
+  pronunciation: string;
+  contextNote: string;
+}) {
+  const trimmedStudyWord = studyWord.trim();
+  const trimmedNativeTranslation = nativeTranslation.trim();
+  const trimmedPronunciation = pronunciation.trim();
+  const trimmedContextNote = contextNote.trim();
+
+  if (!trimmedStudyWord || !trimmedNativeTranslation) {
+    return null;
+  }
+
+  const newWord: Word = {
+    word: trimmedStudyWord,
+    translation: trimmedNativeTranslation,
+    accuracy: 0,
+  };
+
+  if (trimmedPronunciation) {
+    newWord.pronunciation = trimmedPronunciation;
+  }
+
+  if (trimmedContextNote) {
+    newWord.example = trimmedContextNote;
+    newWord.contextNote = trimmedContextNote;
+  }
+
+  return newWord;
+}
+
+export default function AddWordPage() {
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [mode, setMode] = useState<AddMode>("manual");
@@ -184,11 +222,12 @@ export default function RedesignedAddWordPage() {
     null,
   );
   const [banner, setBanner] = useState<BannerState>(null);
-  const [nativeWord, setNativeWord] = useState("");
-  const [learningWord, setLearningWord] = useState("");
+  const [studyWord, setStudyWord] = useState("");
+  const [nativeTranslation, setNativeTranslation] = useState("");
   const [pronunciation, setPronunciation] = useState("");
   const [contextNote, setContextNote] = useState("");
-  const [suggestedLearningWord, setSuggestedLearningWord] = useState("");
+  const [suggestedNativeTranslation, setSuggestedNativeTranslation] =
+    useState("");
   const [suggestionLoading, setSuggestionLoading] = useState(false);
   const [suggestionError, setSuggestionError] = useState<string | null>(null);
   const [scanImageFile, setScanImageFile] = useState<File | null>(null);
@@ -280,8 +319,8 @@ export default function RedesignedAddWordPage() {
   );
   const canSaveManual =
     !!activeDeck &&
-    !!nativeWord.trim() &&
-    !!learningWord.trim() &&
+    !!studyWord.trim() &&
+    !!nativeTranslation.trim() &&
     !saveLoading;
   const canSaveScan =
     !!activeDeck &&
@@ -291,11 +330,11 @@ export default function RedesignedAddWordPage() {
     !saveLoading;
 
   const resetManualForm = useCallback(() => {
-    setNativeWord("");
-    setLearningWord("");
+    setStudyWord("");
+    setNativeTranslation("");
     setPronunciation("");
     setContextNote("");
-    setSuggestedLearningWord("");
+    setSuggestedNativeTranslation("");
     setSuggestionError(null);
   }, []);
 
@@ -315,11 +354,11 @@ export default function RedesignedAddWordPage() {
     }
 
     if (activeDeck) {
-      router.push(`/redesigned/decks/${activeDeck.id}`);
+      router.push(`/deck/${activeDeck.id}`);
       return;
     }
 
-    router.push("/redesigned/home");
+    router.push("/home");
   }, [activeDeck, router]);
 
   const openDeckMenu = useCallback(
@@ -363,17 +402,17 @@ export default function RedesignedAddWordPage() {
     (tabId: string) => {
       switch (tabId as RedesignedTabId) {
         case "quests":
-          router.push("/redesigned/home");
+          router.push("/home");
           break;
         case "decks":
           if (activeDeck) {
-            router.push(`/redesigned/decks/${activeDeck.id}`);
+            router.push(`/deck/${activeDeck.id}`);
           } else {
             router.push("/home");
           }
           break;
         case "profile":
-          router.push("/redesigned/profile");
+          router.push("/profile");
           break;
         case "add":
         default:
@@ -384,8 +423,13 @@ export default function RedesignedAddWordPage() {
   );
 
   useEffect(() => {
-    if (!activeDeck || !nativeWord.trim()) {
-      setSuggestedLearningWord("");
+    if (
+      !activeDeck ||
+      !activeDeck.study ||
+      !activeDeck.language ||
+      !studyWord.trim()
+    ) {
+      setSuggestedNativeTranslation("");
       setSuggestionError(null);
       setSuggestionLoading(false);
       return;
@@ -397,13 +441,13 @@ export default function RedesignedAddWordPage() {
         setSuggestionLoading(true);
         setSuggestionError(null);
         const nextSuggestion = await translateText(
-          nativeWord.trim(),
-          normalizeLanguageCode(activeDeck.language),
+          studyWord.trim(),
           normalizeLanguageCode(activeDeck.study),
+          normalizeLanguageCode(activeDeck.language),
         );
 
         if (!cancelled) {
-          setSuggestedLearningWord(nextSuggestion);
+          setSuggestedNativeTranslation(nextSuggestion);
         }
       } catch (error) {
         if (!cancelled) {
@@ -424,7 +468,7 @@ export default function RedesignedAddWordPage() {
       cancelled = true;
       window.clearTimeout(timeoutId);
     };
-  }, [activeDeck, nativeWord]);
+  }, [activeDeck, studyWord]);
 
   useEffect(() => {
     if (!scanImageFile || !activeDeck) {
@@ -515,23 +559,32 @@ export default function RedesignedAddWordPage() {
 
   const handleManualSave = useCallback(
     async (keepEditing: boolean) => {
-      if (!activeDeck || !nativeWord.trim() || !learningWord.trim()) {
+      if (!activeDeck?.id) {
+        setBanner({
+          severity: "error",
+          message: "Select a deck before saving a word.",
+        });
+        return;
+      }
+
+      const newWord = buildManualWordPayload({
+        studyWord,
+        nativeTranslation,
+        pronunciation,
+        contextNote,
+      });
+
+      if (!newWord) {
+        setBanner({
+          severity: "error",
+          message: "Add both the learning word and the native translation.",
+        });
         return;
       }
 
       setSaveLoading(true);
 
       try {
-        const trimmedContextNote = contextNote.trim();
-        const newWord: Word = {
-          word: learningWord.trim(),
-          translation: nativeWord.trim(),
-          example: trimmedContextNote || undefined,
-          pronunciation: pronunciation.trim() || undefined,
-          contextNote: trimmedContextNote || undefined,
-          accuracy: 0,
-        };
-
         await addWordToDeck(activeDeck.id, newWord);
         setBanner({
           severity: "success",
@@ -543,7 +596,7 @@ export default function RedesignedAddWordPage() {
         if (keepEditing) {
           resetManualForm();
         } else {
-          router.push(`/redesigned/decks/${activeDeck.id}`);
+          router.push(`/deck/${activeDeck.id}`);
         }
       } catch (error) {
         setBanner({
@@ -561,11 +614,11 @@ export default function RedesignedAddWordPage() {
       activeDeck,
       addWordToDeck,
       contextNote,
-      learningWord,
-      nativeWord,
+      nativeTranslation,
       pronunciation,
       resetManualForm,
       router,
+      studyWord,
     ],
   );
 
@@ -611,7 +664,7 @@ export default function RedesignedAddWordPage() {
         severity: "success",
         message: `Added ${selectedWords.length} word${selectedWords.length === 1 ? "" : "s"} to ${activeDeck.name}.`,
       });
-      router.push(`/redesigned/decks/${activeDeck.id}`);
+      router.push(`/deck/${activeDeck.id}`);
     } catch (error) {
       setBanner({
         severity: "error",
@@ -935,7 +988,7 @@ export default function RedesignedAddWordPage() {
                           color: redesignedPalette.text.secondary,
                         }}
                       >
-                        {nativeLanguageLabel} word
+                        {learningLanguageLabel} word
                       </Typography>
                       <Box
                         sx={{
@@ -949,13 +1002,13 @@ export default function RedesignedAddWordPage() {
                           fontWeight: 700,
                         }}
                       >
-                        Native
+                        Learning
                       </Box>
                     </Box>
                     <InputBase
-                      value={nativeWord}
-                      onChange={(event) => setNativeWord(event.target.value)}
-                      placeholder={`e.g. hello in ${nativeLanguageLabel}`}
+                      value={studyWord}
+                      onChange={(event) => setStudyWord(event.target.value)}
+                      placeholder={`e.g. hello in ${learningLanguageLabel}`}
                       sx={inputSx}
                       fullWidth
                     />
@@ -976,7 +1029,7 @@ export default function RedesignedAddWordPage() {
                           color: redesignedPalette.text.secondary,
                         }}
                       >
-                        {learningLanguageLabel} translation
+                        {nativeLanguageLabel} translation
                       </Typography>
                       <Box
                         sx={{
@@ -990,13 +1043,15 @@ export default function RedesignedAddWordPage() {
                           fontWeight: 700,
                         }}
                       >
-                        Learning
+                        Native
                       </Box>
                     </Box>
                     <InputBase
-                      value={learningWord}
-                      onChange={(event) => setLearningWord(event.target.value)}
-                      placeholder={`e.g. hello translated to ${learningLanguageLabel}`}
+                      value={nativeTranslation}
+                      onChange={(event) =>
+                        setNativeTranslation(event.target.value)
+                      }
+                      placeholder={`e.g. hello translated to ${nativeLanguageLabel}`}
                       sx={inputSx}
                       fullWidth
                     />
@@ -1024,14 +1079,14 @@ export default function RedesignedAddWordPage() {
                             color: redesignedPalette.text.secondary,
                           }}
                         >
-                          Looking up a translation suggestion...
+                          Looking up a native translation suggestion...
                         </Typography>
                       </Box>
                     ) : null}
                     {!suggestionLoading &&
-                    suggestedLearningWord &&
-                    suggestedLearningWord.trim().toLocaleLowerCase() !==
-                      learningWord.trim().toLocaleLowerCase() ? (
+                    suggestedNativeTranslation &&
+                    suggestedNativeTranslation.trim().toLocaleLowerCase() !==
+                      nativeTranslation.trim().toLocaleLowerCase() ? (
                       <Box
                         sx={{
                           mt: 1,
@@ -1066,10 +1121,12 @@ export default function RedesignedAddWordPage() {
                             color: redesignedPalette.accent.warm,
                           }}
                         >
-                          {suggestedLearningWord}
+                          {suggestedNativeTranslation}
                         </Typography>
                         <Button
-                          onClick={() => setLearningWord(suggestedLearningWord)}
+                          onClick={() =>
+                            setNativeTranslation(suggestedNativeTranslation)
+                          }
                           sx={{
                             ml: "auto",
                             minWidth: 0,

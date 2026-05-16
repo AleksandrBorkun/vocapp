@@ -1,32 +1,50 @@
 "use client";
 
-import { useState, useCallback } from "react";
-import dynamic from "next/dynamic";
-import { Deck, Word } from "@/lib/types";
-import FullPageLoading from "@/app/components/common/FullPageLoading";
+import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Box,
+  Button,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
+  TextField,
+  Typography,
+} from "@mui/material";
 import ErrorState from "@/app/components/common/ErrorState";
-import AppHeader from "@/app/components/layout/AppHeader";
+import FullPageLoading from "@/app/components/common/FullPageLoading";
+import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedThemeProvider";
+import QuestsHomeScreen from "@/app/components/redesigned/quests/QuestsHomeScreen";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useDecks } from "@/app/hooks/useDecks";
-import { Box, Container, Typography, Button } from "@mui/material";
-import DecksCarousel from "@/app/components/home/DecksCarousel";
-import { OverlayPicture } from "@/app/components/deck/OverlayPicture";
+import {
+  RedesignedTabId,
+  useRedesignedHomeDashboard,
+} from "@/app/hooks/useRedesignedHomeDashboard";
 
-// Lazy load modals for code splitting
-const AddWordModal = dynamic(() => import("@/app/components/AddWordModal"), {
-  loading: () => <FullPageLoading />,
-});
-const CreateDeckModal = dynamic(
-  () => import("@/app/components/home/CreateDeckModal"),
-  {
-    loading: () => <FullPageLoading />,
-  },
-);
-const StudyModal = dynamic(() => import("@/app/components/home/StudyModal"), {
-  loading: () => <FullPageLoading />,
-});
+function getQuestRoute(deckId: string, questId: string) {
+  switch (questId) {
+    case "guess-translation":
+      return `/deck/${deckId}/guess-translation`;
+    case "match-5":
+      return `/deck/${deckId}/match-translation`;
+    case "build-word":
+      return `/deck/${deckId}/build-word-game`;
+    default:
+      return null;
+  }
+}
 
 export default function HomePage() {
+  const router = useRouter();
+  const [isCreateDeckOpen, setIsCreateDeckOpen] = useState(false);
+  const [newDeckName, setNewDeckName] = useState("");
+  const [newDeckDescription, setNewDeckDescription] = useState("");
+  const [studyLanguage, setStudyLanguage] = useState("");
+  const [nativeLanguage, setNativeLanguage] = useState("");
+  const [createDeckError, setCreateDeckError] = useState<string | null>(null);
+  const [isCreatingDeck, setIsCreatingDeck] = useState(false);
   const {
     user,
     loading: authLoading,
@@ -36,240 +54,249 @@ export default function HomePage() {
     requireOnboarding: true,
     redirectTo: "/login",
   });
-
   const {
     decks,
     loading: decksLoading,
     error: decksError,
     createDeck,
-    deleteDeck,
-    addWordToDeck,
   } = useDecks(user);
+  const dashboard = useRedesignedHomeDashboard(user, decks, !decksLoading);
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showStudyModal, setShowStudyModal] = useState(false);
-  const [currentDeck, setCurrentDeck] = useState<Deck | null>(null);
-  const [showAddWordsModal, setShowAddWordsModal] = useState(false);
-  const [selectedDeck, setSelectedDeck] = useState<Deck | null>(null);
-  const [imageFile, setImageFile] = useState<File | undefined>(undefined);
-  const [selectedWords, setSelectedWords] = useState<string | null>(null);
+  const loading = authLoading || decksLoading || dashboard.loading;
+  const error = authError || decksError || dashboard.error;
 
-  const loading = authLoading || decksLoading;
-  const error = authError || decksError;
-
-  const handleCreateDeck = useCallback(
-    async (
-      name: string,
-      description: string,
-      studyLanguage: string,
-      nativeLanguage: string,
-      words: Word[],
-    ) => {
-      if (!user) return;
-
-      try {
-        await createDeck({
-          name,
-          description,
-          study: studyLanguage.toUpperCase(),
-          language: nativeLanguage.toUpperCase(),
-          words,
-        });
-        setShowCreateModal(false);
-      } catch (error) {
-        console.error("Error creating deck:", error);
-      }
-    },
-    [user, createDeck],
-  );
-
-  const handleDeleteDeck = useCallback(
-    async (deckId: string) => {
-      if (!confirm("Are you sure you want to delete this deck?") || !user)
+  const handleQuestStart = useCallback(
+    (questId: string) => {
+      if (!dashboard.activeDeck) {
         return;
+      }
 
-      try {
-        await deleteDeck(user.uid, deckId);
-      } catch (error) {
-        console.error("Error deleting deck:", error);
+      const route = getQuestRoute(dashboard.activeDeck.id, questId);
+
+      if (route) {
+        router.push(route);
       }
     },
-    [user, deleteDeck],
+    [dashboard.activeDeck, router],
   );
 
-  const handleAddWord = useCallback(
-    async (word: string, translation: string, example: string) => {
-      if (!user || !selectedDeck) return;
-
-      try {
-        const newWord: Word = {
-          word,
-          translation,
-          example,
-          accuracy: 0,
-        };
-
-        await addWordToDeck(selectedDeck.id, newWord);
-        setShowAddWordsModal(false);
-        setSelectedDeck(null);
-      } catch (error) {
-        console.error("Error adding word:", error);
-        throw error;
+  const handleTabSelect = useCallback(
+    (tabId: string) => {
+      switch (tabId as RedesignedTabId) {
+        case "quests":
+          router.push("/home");
+          break;
+        case "decks":
+          if (dashboard.activeDeck) {
+            router.push(`/deck/${dashboard.activeDeck.id}`);
+          }
+          break;
+        case "add":
+          router.push("/add-word");
+          break;
+        case "profile":
+          router.push("/profile");
+          break;
+        default:
+          break;
       }
     },
-    [user, selectedDeck, addWordToDeck],
+    [dashboard.activeDeck, router],
   );
 
-  const openAddWordsModal = useCallback(
-    (deckId: string) => {
-      const deck = decks.find((d: Deck) => d.id === deckId);
-      if (deck) {
-        setSelectedDeck(deck);
-        setShowAddWordsModal(true);
-      }
-    },
-    [decks],
-  );
+  const handleCloseCreateDeck = useCallback(() => {
+    if (isCreatingDeck) {
+      return;
+    }
 
-  const startStudying = useCallback((deck: Deck) => {
-    setCurrentDeck(deck);
-    setShowStudyModal(true);
-  }, []);
+    setIsCreateDeckOpen(false);
+    setCreateDeckError(null);
+  }, [isCreatingDeck]);
 
-  const handleScanPicture = useCallback((deck: Deck, file: File) => {
-    setSelectedDeck(deck);
-    setImageFile(file);
-  }, []);
+  const handleCreateDeck = useCallback(async () => {
+    if (
+      !newDeckName.trim() ||
+      !studyLanguage.trim() ||
+      !nativeLanguage.trim()
+    ) {
+      setCreateDeckError(
+        "Deck name, study language, and native language are required.",
+      );
+      return;
+    }
+
+    try {
+      setIsCreatingDeck(true);
+      setCreateDeckError(null);
+      await createDeck({
+        name: newDeckName.trim(),
+        description: newDeckDescription.trim(),
+        study: studyLanguage.trim().toUpperCase(),
+        language: nativeLanguage.trim().toUpperCase(),
+        words: [],
+      });
+      setIsCreateDeckOpen(false);
+      setNewDeckName("");
+      setNewDeckDescription("");
+      setStudyLanguage("");
+      setNativeLanguage("");
+    } catch (error) {
+      setCreateDeckError(
+        error instanceof Error ? error.message : "Failed to create deck.",
+      );
+    } finally {
+      setIsCreatingDeck(false);
+    }
+  }, [
+    createDeck,
+    nativeLanguage,
+    newDeckDescription,
+    newDeckName,
+    studyLanguage,
+  ]);
 
   if (loading) {
     return <FullPageLoading />;
   }
 
   if (error) {
-    return <ErrorState error={error} />;
+    return <ErrorState error={error} showBackToLogin={false} />;
+  }
+
+  if (decks.length === 0) {
+    return (
+      <RedesignedThemeProvider>
+        <Box
+          sx={{
+            minHeight: "100dvh",
+            px: 3,
+            py: 4,
+            display: "flex",
+            flexDirection: "column",
+            justifyContent: "center",
+            gap: 3,
+          }}
+        >
+          <Box>
+            <Typography
+              sx={{
+                fontSize: 14,
+                letterSpacing: "0.08em",
+                textTransform: "uppercase",
+                color: "text.secondary",
+              }}
+            >
+              Start learning
+            </Typography>
+            <Typography
+              sx={{
+                mt: 1,
+                fontSize: { xs: 36, sm: 48 },
+                fontWeight: 300,
+                lineHeight: 1,
+                letterSpacing: "-0.03em",
+              }}
+            >
+              Create your first deck
+            </Typography>
+            <Typography sx={{ mt: 2, maxWidth: 480, color: "text.secondary" }}>
+              Your quests need an active deck. Create one here, then the new
+              home route will switch into the redesigned study flow.
+            </Typography>
+          </Box>
+
+          <Box
+            sx={{
+              p: 3,
+              borderRadius: 4,
+              border: "1px solid",
+              borderColor: "divider",
+              bgcolor: "background.paper",
+              maxWidth: 520,
+            }}
+          >
+            <Typography sx={{ fontSize: 18, fontWeight: 600 }}>
+              Ready to add your first language pair?
+            </Typography>
+            <Typography sx={{ mt: 1, color: "text.secondary" }}>
+              Use short language codes like `EN`, `ES`, or `DE`.
+            </Typography>
+            <Button
+              onClick={() => setIsCreateDeckOpen(true)}
+              sx={{ mt: 3 }}
+              variant="contained"
+            >
+              Create deck
+            </Button>
+          </Box>
+
+          <Dialog
+            open={isCreateDeckOpen}
+            onClose={handleCloseCreateDeck}
+            fullWidth
+          >
+            <DialogTitle>Create deck</DialogTitle>
+            <DialogContent sx={{ display: "grid", gap: 2, pt: 1 }}>
+              <TextField
+                autoFocus
+                label="Deck name"
+                value={newDeckName}
+                onChange={(event) => setNewDeckName(event.target.value)}
+                required
+              />
+              <TextField
+                label="Description"
+                value={newDeckDescription}
+                onChange={(event) => setNewDeckDescription(event.target.value)}
+              />
+              <TextField
+                label="Study language"
+                placeholder="ES"
+                value={studyLanguage}
+                onChange={(event) => setStudyLanguage(event.target.value)}
+                required
+              />
+              <TextField
+                label="Native language"
+                placeholder="EN"
+                value={nativeLanguage}
+                onChange={(event) => setNativeLanguage(event.target.value)}
+                required
+              />
+              {createDeckError ? (
+                <Typography color="error">{createDeckError}</Typography>
+              ) : null}
+            </DialogContent>
+            <DialogActions>
+              <Button onClick={handleCloseCreateDeck} disabled={isCreatingDeck}>
+                Cancel
+              </Button>
+              <Button
+                onClick={() => void handleCreateDeck()}
+                disabled={isCreatingDeck}
+              >
+                {isCreatingDeck ? "Creating..." : "Create"}
+              </Button>
+            </DialogActions>
+          </Dialog>
+        </Box>
+      </RedesignedThemeProvider>
+    );
   }
 
   return (
-    <Box sx={{ minHeight: "100vh", bgcolor: "background.default" }}>
-      <AppHeader />
-
-      {/* Main Content */}
-      <Container component="main" maxWidth="lg" sx={{ p: { xs: 2, sm: 3 } }}>
-        <Box sx={{ mb: 3 }}>
-          <Typography
-            variant="h4"
-            component="h2"
-            fontWeight="bold"
-            color="text.primary"
-            mb={1}
-            sx={{ fontSize: { xs: "1.5rem", sm: "1.875rem" } }}
-          >
-            My Vocabulary Decks
-          </Typography>
-          <Typography color="secondary.main">
-            Welcome back, {user?.email}
-          </Typography>
-        </Box>
-
-        {/* Vocabulary Decks */}
-        {decks.length === 0 ? (
-          <Box sx={{ display: "flex", justifyContent: "center", py: 6, px: 3 }}>
-            <Button
-              onClick={() => setShowCreateModal(true)}
-              sx={{
-                bgcolor: "background.paper",
-                p: { xs: 4, sm: 5 },
-                borderRadius: 2,
-                boxShadow: 3,
-                "&:hover": { boxShadow: 6 },
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                textAlign: "center",
-                height: "80vh",
-                width: "calc(100% - 3rem)",
-                maxWidth: "xl",
-                border: 2,
-                borderStyle: "dashed",
-                borderColor: "grey.300",
-                "&:hover .add-icon": {
-                  transform: "scale(1.1)",
-                },
-              }}
-            >
-              <Box
-                className="add-icon"
-                sx={{
-                  fontSize: "3rem",
-                  mb: 2,
-                  transition: "transform 0.2s",
-                }}
-              >
-                ➕
-              </Box>
-              <Typography
-                variant="h5"
-                fontWeight={600}
-                color="grey.800"
-                mb={1.5}
-                sx={{ fontSize: { xs: "1.25rem", sm: "1.5rem" } }}
-              >
-                Create Your First Deck
-              </Typography>
-              <Typography variant="body2" color="grey.600">
-                You don't have any vocabulary decks yet. Start building your
-                language learning collection now!
-              </Typography>
-            </Button>
-          </Box>
-        ) : (
-          <DecksCarousel
-            decks={decks}
-            onStudyDeck={startStudying}
-            onAddWords={openAddWordsModal}
-            onDeleteDeck={handleDeleteDeck}
-            onCreateDeck={() => setShowCreateModal(true)}
-            onScanPicture={handleScanPicture}
-          />
-        )}
-      </Container>
-
-      {/* Create Deck Modal */}
-      <CreateDeckModal
-        open={showCreateModal}
-        onClose={() => setShowCreateModal(false)}
-        onSubmit={handleCreateDeck}
+    <RedesignedThemeProvider>
+      <QuestsHomeScreen
+        header={dashboard.header}
+        progress={dashboard.progress}
+        quests={dashboard.quests}
+        completed={dashboard.completed}
+        tabs={dashboard.tabs}
+        onQuestStart={handleQuestStart}
+        onTabSelect={handleTabSelect}
+        emptyQuestMessage={dashboard.emptyQuestMessage}
+        emptyCompletedMessage={dashboard.emptyCompletedMessage}
       />
-
-      {/* Add Word Modal */}
-      <AddWordModal
-        open={showAddWordsModal}
-        onClose={() => {
-          setShowAddWordsModal(false);
-          setSelectedDeck(null);
-          setSelectedWords(null);
-          setImageFile(undefined);
-        }}
-        onSave={handleAddWord}
-        sourceLang={selectedDeck?.study}
-        targetLang={selectedDeck?.language}
-        selectedWords={selectedWords ?? undefined}
-      />
-
-      {/* OCR Overlay */}
-      <OverlayPicture
-        file={imageFile}
-        onClose={setImageFile}
-        handleAddWord={() => setShowAddWordsModal(true)}
-        setEditingWord={setSelectedWords}
-      />
-
-      {/* Study Modal */}
-      <StudyModal
-        open={showStudyModal}
-        onClose={() => setShowStudyModal(false)}
-        deck={currentDeck}
-      />
-    </Box>
+    </RedesignedThemeProvider>
   );
 }

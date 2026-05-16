@@ -98,7 +98,7 @@ function formatCompactNumber(value: number) {
   return `${value}`;
 }
 
-export default function RedesignedProfilePage() {
+export default function ProfilePage() {
   const router = useRouter();
   const [userDoc, setUserDoc] = useState<User | null>(null);
   const [profileLoading, setProfileLoading] = useState(true);
@@ -347,17 +347,17 @@ export default function RedesignedProfilePage() {
     (tabId: string) => {
       switch (tabId as RedesignedTabId) {
         case "quests":
-          router.push("/redesigned/home");
+          router.push("/home");
           break;
         case "decks":
           if (activeDeck) {
-            router.push(`/redesigned/decks/${activeDeck.id}`);
+            router.push(`/deck/${activeDeck.id}`);
           } else {
             router.push("/home");
           }
           break;
         case "add":
-          router.push("/redesigned/add-word");
+          router.push("/add-word");
           break;
         case "profile":
         default:
@@ -379,7 +379,7 @@ export default function RedesignedProfilePage() {
 
       setActiveDeckIdCookie(match.previewDeckId);
       setActiveDeckId(match.previewDeckId);
-      router.push(`/redesigned/decks/${match.previewDeckId}`);
+      router.push(`/deck/${match.previewDeckId}`);
     },
     [languageGroups, router],
   );
@@ -396,7 +396,7 @@ export default function RedesignedProfilePage() {
 
       setActiveDeckIdCookie(match.studyDeckId);
       setActiveDeckId(match.studyDeckId);
-      router.push("/redesigned/home");
+      router.push("/home");
     },
     [languageGroups, router],
   );
