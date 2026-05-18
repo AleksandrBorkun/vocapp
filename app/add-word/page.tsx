@@ -252,6 +252,7 @@ export default function AddWordPage() {
     loading: decksLoading,
     error: decksError,
     addWordToDeck,
+    addWordsToDeck,
   } = useDecks(user);
 
   useEffect(() => {
@@ -652,18 +653,22 @@ export default function AddWordPage() {
     setSaveLoading(true);
 
     try {
-      for (const word of selectedWords) {
-        await addWordToDeck(activeDeck.id, {
+      const savedCount = await addWordsToDeck(
+        activeDeck.id,
+        selectedWords.map((word) => ({
           word: word.text,
           translation: word.translation,
           accuracy: 0,
+        })),
+      );
+
+      if (savedCount > 0) {
+        setBanner({
+          severity: "success",
+          message: `Added ${savedCount} word${savedCount === 1 ? "" : "s"} to ${activeDeck.name}.`,
         });
       }
 
-      setBanner({
-        severity: "success",
-        message: `Added ${selectedWords.length} word${selectedWords.length === 1 ? "" : "s"} to ${activeDeck.name}.`,
-      });
       router.push(`/deck/${activeDeck.id}`);
     } catch (error) {
       setBanner({
@@ -676,7 +681,7 @@ export default function AddWordPage() {
     } finally {
       setSaveLoading(false);
     }
-  }, [activeDeck, addWordToDeck, router, scanWords]);
+  }, [activeDeck, addWordsToDeck, router, scanWords]);
 
   const loading = authLoading || decksLoading;
   const error = authError || decksError;

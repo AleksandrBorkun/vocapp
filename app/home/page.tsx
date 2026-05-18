@@ -22,18 +22,12 @@ import {
   RedesignedTabId,
   useRedesignedHomeDashboard,
 } from "@/app/hooks/useRedesignedHomeDashboard";
+import { getRedesignedQuestById } from "@/lib/redesigned/quests";
 
 function getQuestRoute(deckId: string, questId: string) {
-  switch (questId) {
-    case "guess-translation":
-      return `/deck/${deckId}/guess-translation`;
-    case "match-5":
-      return `/deck/${deckId}/match-translation`;
-    case "build-word":
-      return `/deck/${deckId}/build-word-game`;
-    default:
-      return null;
-  }
+  const quest = getRedesignedQuestById(questId);
+
+  return quest ? `/deck/${deckId}/${quest.routeSegment}` : null;
 }
 
 export default function HomePage() {

@@ -1,7 +1,15 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { doc, Firestore, getDoc, getFirestore, setDoc } from 'firebase/firestore';
-import { QuestProgressByLanguage, User } from './types';
+import {
+  doc,
+  Firestore,
+  getDoc,
+  getFirestore,
+  setDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import { QuestProgressByLanguage, User, Word } from './types';
+import { normalizeLanguageCode } from './utils/languageMapper';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -135,4 +143,59 @@ export async function getUserQuestProgress(
   const userDoc = await getUserDocument(userId);
 
   return userDoc?.questProgress ?? {};
+}
+
+interface SubmitQuestResultsParams {
+  userId: string;
+  deckId: string;
+  updatedWords: Word[];
+  languageCode: string;
+  xpReward: number;
+}
+
+export async function submitQuestResults({
+  userId,
+  deckId,
+  updatedWords,
+  languageCode,
+  xpReward,
+}: SubmitQuestResultsParams): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const normalizedLanguageCode = normalizeLanguageCode(languageCode);
+  const deckRef = doc(db, 'decks', deckId);
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  const existingUser = userSnap.exists()
+    ? normalizeUserDocument(userSnap.data() as Partial<User>)
+    : null;
+  const existingProgress =
+    existingUser?.questProgress?.[normalizedLanguageCode] ?? {
+      totalXp: 0,
+      streak: 0,
+      lastCompletedOn: null,
+      updatedAt: null,
+    };
+  const timestamp = new Date().toISOString();
+
+  const batch = writeBatch(db);
+  batch.update(deckRef, {
+    words: updatedWords,
+  });
+  batch.set(
+    userRef,
+    {
+      questProgress: {
+        [normalizedLanguageCode]: {
+          ...existingProgress,
+          totalXp: existingProgress.totalXp + Math.max(0, xpReward),
+          lastCompletedOn: timestamp,
+          updatedAt: timestamp,
+        },
+      },
+    },
+    { merge: true },
+  );
+
+  await batch.commit();
 }

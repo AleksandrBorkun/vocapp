@@ -21,8 +21,13 @@ import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import ErrorState from "@/app/components/common/ErrorState";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
+import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedThemeProvider";
+import LivesDisplay from "@/app/components/redesigned/primitives/LivesDisplay";
+import RedesignedScreenShell from "@/app/components/redesigned/primitives/RedesignedScreenShell";
+import RewardBadge from "@/app/components/redesigned/primitives/RewardBadge";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
+import { getRedesignedQuestByRoute } from "@/lib/redesigned/quests";
 import { getTranslation } from "@/lib/translations";
 import { Word } from "@/lib/types";
 import { getLanguageName } from "@/lib/utils/languageMapper";
@@ -33,12 +38,12 @@ import {
 } from "@/lib/utils/studyGame";
 
 const ROUND_SIZE = 10;
-const HEART_COUNT = 3;
-const SERIF_FONT = '"Fraunces", Georgia, serif';
-const ACCENT_COLOR = "#c87c3b";
-const SUCCESS_COLOR = "#52b86a";
-const ERROR_COLOR = "#d44e3c";
+const CORRECT_ANSWER_DELTA = 0.05;
+const WRONG_ANSWER_DELTA = 0.02;
 const FALLBACK_DECOY_LETTERS = Array.from("abcdefghijklmnopqrstuvwxyz");
+const BUILD_QUEST = getRedesignedQuestByRoute("build-word-game");
+const BUILD_REWARD_XP = BUILD_QUEST?.rewardXp ?? 25;
+const BUILD_MAX_LIVES = BUILD_QUEST?.maxLives ?? BUILD_QUEST?.lives ?? 3;
 
 type AnswerUnit = {
   value: string;
@@ -205,11 +210,14 @@ function buildAttempt(card: GameCard, placements: Array<string | null>) {
     .join("");
 }
 
-export default function BuildWordGamePage() {
+function BuildWordGameScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const deckId = params.id as string;
+  const redesign = theme.vocappRedesign.palette;
+  const displayFont = theme.vocappRedesign.fonts.display;
+  const radii = theme.vocappRedesign.radii;
 
   const { user, loading: authLoading } = useAuth({ requireAuth: true });
   const {
@@ -217,7 +225,7 @@ export default function BuildWordGamePage() {
     loading: deckLoading,
     error,
     loadDeck,
-    updateWordAccuracy,
+    submitStudyResults,
   } = useWords();
 
   const [round, setRound] = useState<GameCard[]>([]);
@@ -230,6 +238,10 @@ export default function BuildWordGamePage() {
   const [roundComplete, setRoundComplete] = useState(false);
   const [savingAnswer, setSavingAnswer] = useState(false);
   const [gameError, setGameError] = useState<string | null>(null);
+  const [remainingLives, setRemainingLives] = useState(BUILD_MAX_LIVES);
+  const [pendingUpdates, setPendingUpdates] = useState<
+    Array<{ wordIndex: number; delta: number }>
+  >([]);
 
   const loading = authLoading || deckLoading;
   const currentCard = round[currentCardIndex] ?? null;
@@ -264,6 +276,8 @@ export default function BuildWordGamePage() {
     setCorrectAnswers(0);
     setRoundComplete(false);
     setGameError(null);
+    setRemainingLives(BUILD_MAX_LIVES);
+    setPendingUpdates([]);
     setTurnState(nextRound[0] ?? null);
   }
 
@@ -339,7 +353,7 @@ export default function BuildWordGamePage() {
     setHintUsed(true);
   }
 
-  async function handleCheckAnswer() {
+  function handleCheckAnswer() {
     if (!currentCard || checkedAnswer || savingAnswer) {
       return;
     }
@@ -351,15 +365,50 @@ export default function BuildWordGamePage() {
 
     setCheckedAnswer(true);
     setIsCorrectAnswer(nextIsCorrect);
+    setPendingUpdates((previous) => [
+      ...previous,
+      {
+        wordIndex: currentCard.deckIndex,
+        delta: nextIsCorrect ? CORRECT_ANSWER_DELTA : -WRONG_ANSWER_DELTA,
+      },
+    ]);
 
     if (nextIsCorrect) {
       setCorrectAnswers((previous) => previous + 1);
+      return;
+    }
+
+    setRemainingLives((previous) => Math.max(0, previous - 1));
+  }
+
+  async function handleNextCard() {
+    if (!currentCard || !checkedAnswer || savingAnswer) {
+      return;
+    }
+
+    if (currentCardIndex < round.length - 1) {
+      const nextIndex = currentCardIndex + 1;
+      setCurrentCardIndex(nextIndex);
+      setTurnState(round[nextIndex] ?? null);
+      return;
+    }
+
+    if (!user || !deck) {
+      setGameError("Unable to save build-word progress");
+      return;
     }
 
     setSavingAnswer(true);
 
     try {
-      await updateWordAccuracy(deckId, currentCard.deckIndex, nextIsCorrect);
+      await submitStudyResults({
+        deckId,
+        userId: user.uid,
+        languageCode: deck.study,
+        xpReward: BUILD_REWARD_XP,
+        updates: pendingUpdates,
+      });
+      setRoundComplete(true);
     } catch (updateError) {
       setGameError(
         updateError instanceof Error
@@ -369,21 +418,6 @@ export default function BuildWordGamePage() {
     } finally {
       setSavingAnswer(false);
     }
-  }
-
-  function handleNextCard() {
-    if (!currentCard || !checkedAnswer || savingAnswer) {
-      return;
-    }
-
-    if (currentCardIndex === round.length - 1) {
-      setRoundComplete(true);
-      return;
-    }
-
-    const nextIndex = currentCardIndex + 1;
-    setCurrentCardIndex(nextIndex);
-    setTurnState(round[nextIndex] ?? null);
   }
 
   function handleRetryLoad() {
@@ -417,123 +451,178 @@ export default function BuildWordGamePage() {
 
   if (roundComplete) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          color: "text.primary",
-          px: { xs: 2, sm: 3 },
-          py: { xs: 3, sm: 5 },
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{ minWidth: 0, width: 44, height: 44, borderRadius: 3 }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
-          <Typography
-            variant="h4"
-            sx={{ fontFamily: SERIF_FONT, fontWeight: 300 }}
-          >
-            {getTranslation("buildWord.title")}
-          </Typography>
-        </Box>
-
+      <RedesignedScreenShell>
         <Box
           sx={{
-            flex: 1,
+            px: 3,
+            pt: 3,
+            pb: 4,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
+            minHeight: "100dvh",
           }}
         >
-          <Card
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
+              sx={{
+                minWidth: 0,
+                width: 44,
+                height: 44,
+                borderRadius: radii.small,
+                borderColor: redesign.border,
+                color: redesign.text.primary,
+              }}
+            >
+              <ArrowBackRoundedIcon />
+            </Button>
+            <Typography
+              variant="h4"
+              sx={{ fontFamily: displayFont, fontWeight: 300, flex: 1 }}
+            >
+              {getTranslation("buildWord.title")}
+            </Typography>
+            <RewardBadge xp={BUILD_REWARD_XP} />
+          </Box>
+
+          <Box
             sx={{
-              width: "100%",
-              maxWidth: 560,
-              p: { xs: 3, sm: 5 },
-              borderRadius: 6,
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: alpha(theme.palette.text.secondary, 0.18),
-              textAlign: "center",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Typography
-              variant="h3"
-              sx={{ fontFamily: SERIF_FONT, fontWeight: 300, mb: 2 }}
+            <Card
+              sx={{
+                width: "100%",
+                borderRadius: radii.large,
+                backgroundColor: redesign.surface.secondary,
+                borderColor: redesign.border,
+                px: 3,
+                py: 4,
+                textAlign: "center",
+              }}
             >
-              {getTranslation("buildWord.wellDone")}
-            </Typography>
-            <Typography variant="h5" color="text.secondary" mb={4}>
-              {`${correctAnswers}/${round.length} ${getTranslation("buildWord.correctAnswers")}`}
-            </Typography>
+              <Typography
+                variant="h3"
+                sx={{ fontFamily: displayFont, fontWeight: 300, mb: 1.5 }}
+              >
+                {getTranslation("buildWord.wellDone")}
+              </Typography>
+              <Typography sx={{ color: redesign.text.secondary, mb: 2.5 }}>
+                {`${correctAnswers}/${round.length} ${getTranslation("buildWord.correctAnswers")}`}
+              </Typography>
+              <Box
+                sx={{
+                  mb: 3.5,
+                  mx: "auto",
+                  maxWidth: 220,
+                  borderRadius: 999,
+                  px: 1.75,
+                  py: 1,
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 1,
+                  backgroundColor: redesign.accentBackground.success,
+                  border: `1px solid ${alpha(redesign.accent.success, 0.28)}`,
+                }}
+              >
+                <Typography
+                  sx={{ color: redesign.accent.success, fontSize: 14 }}
+                >
+                  ⭐
+                </Typography>
+                <Typography
+                  sx={{
+                    color: redesign.accent.success,
+                    fontWeight: 700,
+                    fontSize: 14,
+                  }}
+                >
+                  +{BUILD_REWARD_XP} XP earned
+                </Typography>
+              </Box>
 
-            <Stack spacing={1.5}>
-              <Button
-                onClick={() => startRound(deck.words)}
-                variant="contained"
-                startIcon={<ReplayRoundedIcon />}
-                sx={{ py: 1.5 }}
-              >
-                {getTranslation("buildWord.nextRound")}
-              </Button>
-              <Button
-                onClick={() => router.push("/home")}
-                variant="outlined"
-                startIcon={<HomeRoundedIcon />}
-                sx={{ py: 1.5 }}
-              >
-                {getTranslation("buildWord.goHome")}
-              </Button>
-            </Stack>
-          </Card>
+              <Stack spacing={1.5}>
+                <Button
+                  onClick={() => startRound(deck.words)}
+                  variant="contained"
+                  startIcon={<ReplayRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    bgcolor: redesign.accent.success,
+                    color: redesign.text.primary,
+                    "&:hover": { bgcolor: redesign.accent.success },
+                  }}
+                >
+                  {getTranslation("buildWord.nextRound")}
+                </Button>
+                <Button
+                  onClick={() => router.push("/home")}
+                  variant="outlined"
+                  startIcon={<HomeRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    borderColor: redesign.border,
+                    color: redesign.text.primary,
+                  }}
+                >
+                  {getTranslation("buildWord.goHome")}
+                </Button>
+              </Stack>
+            </Card>
+          </Box>
         </Box>
-      </Box>
+      </RedesignedScreenShell>
     );
   }
 
   if (!currentCard) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: 2,
-        }}
-      >
-        <Card
+      <RedesignedScreenShell>
+        <Box
           sx={{
-            width: "100%",
-            maxWidth: 520,
-            p: { xs: 3, sm: 4 },
-            borderRadius: 4,
-            bgcolor: "background.paper",
-            textAlign: "center",
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 3,
           }}
         >
-          <Typography variant="h5" fontWeight={700} mb={1.5}>
-            {getTranslation("buildWord.title")}
-          </Typography>
-          <Typography color="text.secondary" mb={3}>
-            {getTranslation("buildWord.emptyDeck")}
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => router.push(`/deck/${deckId}`)}
+          <Card
+            sx={{
+              width: "100%",
+              borderRadius: radii.large,
+              px: 3,
+              py: 4,
+              textAlign: "center",
+              backgroundColor: redesign.surface.secondary,
+            }}
           >
-            {getTranslation("buildWord.backToDeck")}
-          </Button>
-        </Card>
-      </Box>
+            <Typography
+              variant="h5"
+              sx={{ color: redesign.text.primary, mb: 1.5 }}
+            >
+              {getTranslation("buildWord.title")}
+            </Typography>
+            <Typography sx={{ color: redesign.text.secondary, mb: 3 }}>
+              {getTranslation("buildWord.emptyDeck")}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push(`/deck/${deckId}`)}
+              sx={{
+                bgcolor: redesign.accent.success,
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("buildWord.backToDeck")}
+            </Button>
+          </Card>
+        </Box>
+      </RedesignedScreenShell>
     );
   }
 
@@ -541,333 +630,327 @@ export default function BuildWordGamePage() {
   const currentAttempt = buildAttempt(currentCard, placements);
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        color: "text.primary",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box sx={{ px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 } }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 3 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{
-              minWidth: 0,
-              width: 44,
-              height: 44,
-              borderRadius: 3,
-              borderColor: alpha(theme.palette.text.secondary, 0.24),
-            }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
-
-          <Typography
-            variant="h4"
-            sx={{
-              flex: 1,
-              fontFamily: SERIF_FONT,
-              fontWeight: 300,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {getTranslation("buildWord.title")}
-          </Typography>
-
-          <Box sx={{ display: "flex", gap: 0.5, fontSize: "1.1rem" }}>
-            {Array.from({ length: HEART_COUNT }).map((_, index) => (
-              <Box key={`heart-${index}`} component="span">
-                ❤
-              </Box>
-            ))}
-          </Box>
-        </Box>
-
-        <Typography
-          sx={{
-            color: alpha(theme.palette.text.secondary, 0.72),
-            fontSize: 12,
-            textTransform: "uppercase",
-            letterSpacing: "0.08em",
-            mb: 1,
-          }}
-        >
-          {`${currentCardIndex + 1} / ${round.length}`}
-        </Typography>
-
-        <Card
-          sx={{
-            p: { xs: 2.5, sm: 3 },
-            borderRadius: 5,
-            bgcolor: alpha(theme.palette.background.paper, 0.92),
-            border: 1,
-            borderColor: alpha(theme.palette.text.secondary, 0.14),
-            textAlign: "center",
-            mb: 3,
-          }}
-        >
-          <Typography
-            sx={{
-              fontSize: 11,
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              color: alpha(theme.palette.text.secondary, 0.54),
-              mb: 1,
-            }}
-          >
-            {`${getTranslation("buildWord.translateTo")} ${studyLanguage}`}
-          </Typography>
-          <Typography
-            sx={{
-              fontFamily: SERIF_FONT,
-              fontSize: { xs: "2.5rem", sm: "3rem" },
-              fontWeight: 300,
-              letterSpacing: "-0.03em",
-              lineHeight: 1,
-              mb: 1,
-            }}
-          >
-            {currentCard.prompt}
-          </Typography>
-          <Typography sx={{ color: "text.secondary" }}>
-            {getTranslation("buildWord.instruction")}
-          </Typography>
-        </Card>
-      </Box>
-
+    <RedesignedScreenShell>
       <Box
-        sx={{
-          flex: 1,
-          display: "flex",
-          flexDirection: "column",
-          px: { xs: 2, sm: 3 },
-          pb: { xs: 2, sm: 3 },
-          maxWidth: 760,
-          width: "100%",
-          mx: "auto",
-        }}
+        sx={{ display: "flex", minHeight: "100dvh", flexDirection: "column" }}
       >
-        <Typography
-          sx={{
-            textAlign: "center",
-            color: "text.secondary",
-            fontSize: 12,
-            mb: 1.25,
-          }}
-        >
-          {getTranslation("buildWord.answerLabel")}
-        </Typography>
-
-        <Tooltip
-          arrow
-          disableFocusListener
-          disableHoverListener
-          disableTouchListener
-          open={checkedAnswer && isCorrectAnswer === false}
-          placement="top"
-          title={tooltipMessage}
-        >
+        <Box sx={{ px: 3, pt: 3, pb: 3 }}>
           <Box
-            sx={{
-              minHeight: 84,
-              mb: 2,
-              p: 2,
-              borderRadius: 4,
-              bgcolor: alpha(theme.palette.common.black, 0.18),
-              border: 1.5,
-              borderStyle: "dashed",
-              borderColor:
-                checkedAnswer && isCorrectAnswer !== null
-                  ? isCorrectAnswer
-                    ? alpha(SUCCESS_COLOR, 0.5)
-                    : alpha(ERROR_COLOR, 0.5)
-                  : alpha(theme.palette.text.secondary, 0.18),
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-            }}
+            sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 2.5 }}
           >
-            <Box
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
               sx={{
-                display: "flex",
-                flexWrap: "wrap",
-                justifyContent: "center",
-                gap: 0.75,
+                minWidth: 0,
+                width: 36,
+                height: 36,
+                borderRadius: 1.25,
+                borderColor: redesign.border,
+                backgroundColor: redesign.surface.secondary,
+                color: redesign.text.primary,
               }}
             >
-              {(() => {
-                let playableIndex = 0;
+              <ArrowBackRoundedIcon fontSize="small" />
+            </Button>
 
-                return currentCard.answerUnits.map((unit, unitIndex) => {
-                  if (!unit.isPlayable) {
-                    return (
-                      <Box
-                        key={`fixed-${unitIndex}`}
-                        sx={{
-                          minWidth: 22,
-                          height: 52,
-                          px: 0.5,
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          fontFamily: SERIF_FONT,
-                          fontSize: 24,
-                          color:
-                            checkedAnswer && isCorrectAnswer !== null
-                              ? isCorrectAnswer
-                                ? SUCCESS_COLOR
-                                : ERROR_COLOR
-                              : "text.secondary",
-                        }}
-                      >
-                        {unit.value}
-                      </Box>
-                    );
-                  }
+            <Typography
+              variant="h4"
+              sx={{
+                flex: 1,
+                fontFamily: displayFont,
+                fontWeight: 300,
+                letterSpacing: "-0.02em",
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("buildWord.title")}
+            </Typography>
 
-                  const placementIndex = playableIndex;
-                  const tileId = placements[placementIndex];
-                  const tile = currentCard.trayTiles.find(
-                    (candidate) => candidate.id === tileId,
-                  );
-                  const displayValue = tile?.value ?? "_";
-                  playableIndex += 1;
-
-                  return (
-                    <Button
-                      key={`slot-${unitIndex}`}
-                      onClick={() => handleRemovePlacement(placementIndex)}
-                      variant="text"
-                      sx={{
-                        minWidth: 44,
-                        width: 44,
-                        height: 52,
-                        p: 0,
-                        borderRadius: 2.5,
-                        borderBottom: 3,
-                        borderColor:
-                          checkedAnswer && isCorrectAnswer !== null
-                            ? isCorrectAnswer
-                              ? SUCCESS_COLOR
-                              : ERROR_COLOR
-                            : tile
-                              ? ACCENT_COLOR
-                              : alpha(theme.palette.text.secondary, 0.22),
-                        bgcolor:
-                          checkedAnswer && isCorrectAnswer !== null
-                            ? isCorrectAnswer
-                              ? alpha(SUCCESS_COLOR, 0.12)
-                              : alpha(ERROR_COLOR, 0.12)
-                            : tile
-                              ? alpha(ACCENT_COLOR, 0.12)
-                              : "transparent",
-                        color:
-                          checkedAnswer && isCorrectAnswer !== null
-                            ? isCorrectAnswer
-                              ? SUCCESS_COLOR
-                              : ERROR_COLOR
-                            : tile
-                              ? "text.primary"
-                              : "text.secondary",
-                        fontFamily: SERIF_FONT,
-                        fontSize: 24,
-                        pointerEvents: checkedAnswer ? "none" : "auto",
-                      }}
-                    >
-                      {displayValue.toLocaleUpperCase()}
-                    </Button>
-                  );
-                });
-              })()}
-            </Box>
+            <LivesDisplay lives={remainingLives} maxLives={BUILD_MAX_LIVES} />
           </Box>
-        </Tooltip>
 
-        {checkedAnswer && isCorrectAnswer !== null ? (
-          <Stack
-            direction="row"
-            spacing={1}
-            alignItems="center"
-            justifyContent="center"
+          <Card
             sx={{
-              color: isCorrectAnswer ? SUCCESS_COLOR : ERROR_COLOR,
-              mb: 2.5,
+              mb: 3,
+              px: 2.5,
+              py: 2.5,
+              borderRadius: radii.large,
+              backgroundColor: redesign.surface.secondary,
+              textAlign: "center",
             }}
           >
-            {isCorrectAnswer ? (
-              <CheckCircleRoundedIcon fontSize="small" />
-            ) : (
-              <ErrorOutlineRoundedIcon fontSize="small" />
-            )}
-            <Typography sx={{ fontWeight: 600 }}>
-              {isCorrectAnswer
-                ? `${currentAttempt} ✓`
-                : getTranslation("buildWord.tryAgain")}
+            <Typography
+              sx={{
+                fontSize: 11,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                color: redesign.text.muted,
+                mb: 1,
+              }}
+            >
+              {`${getTranslation("buildWord.translateTo")} ${studyLanguage}`}
             </Typography>
-          </Stack>
-        ) : null}
+            <Typography
+              sx={{
+                fontFamily: displayFont,
+                fontSize: { xs: "2.25rem", sm: "2.75rem" },
+                fontWeight: 300,
+                letterSpacing: "-0.03em",
+                lineHeight: 1,
+                color: redesign.text.primary,
+                mb: 0.75,
+              }}
+            >
+              {currentCard.prompt}
+            </Typography>
+            <Typography sx={{ color: redesign.text.secondary, fontSize: 14 }}>
+              {getTranslation("buildWord.instruction")}
+            </Typography>
+          </Card>
 
-        <Typography
-          sx={{
-            textAlign: "center",
-            color: "text.secondary",
-            fontSize: 12,
-            mb: 1.25,
-          }}
-        >
-          {getTranslation("buildWord.trayLabel")}
-        </Typography>
+          <Typography
+            sx={{
+              textAlign: "center",
+              fontSize: 12,
+              color: redesign.text.secondary,
+              textTransform: "uppercase",
+              letterSpacing: "0.08em",
+              mb: 1,
+            }}
+          >
+            {`${currentCardIndex + 1} / ${round.length}`}
+          </Typography>
+        </Box>
 
         <Box
           sx={{
+            flex: 1,
+            px: 3,
+            pb: 0,
             display: "flex",
-            flexWrap: "wrap",
-            justifyContent: "center",
-            gap: 1,
-            mb: 3,
+            flexDirection: "column",
           }}
         >
-          {currentCard.trayTiles.map((tile) => {
-            const isUsed = usedTileIds.has(tile.id);
+          <Typography
+            sx={{
+              textAlign: "center",
+              color: redesign.text.secondary,
+              fontSize: 12,
+              mb: 1.25,
+            }}
+          >
+            {getTranslation("buildWord.answerLabel")}
+          </Typography>
 
-            return (
-              <Button
-                key={tile.id}
-                onClick={() => handlePlaceTile(tile.id)}
-                variant="text"
-                disabled={isUsed || checkedAnswer || savingAnswer}
+          <Tooltip
+            arrow
+            disableFocusListener
+            disableHoverListener
+            disableTouchListener
+            open={checkedAnswer && isCorrectAnswer === false}
+            placement="top"
+            title={tooltipMessage}
+          >
+            <Box
+              sx={{
+                minHeight: 84,
+                mb: 2,
+                px: 2,
+                py: 1.5,
+                borderRadius: radii.medium,
+                backgroundColor: redesign.surface.primary,
+                border: `1.5px dashed ${
+                  checkedAnswer && isCorrectAnswer !== null
+                    ? isCorrectAnswer
+                      ? alpha(redesign.accent.success, 0.5)
+                      : alpha(redesign.accent.danger, 0.5)
+                    : redesign.border
+                }`,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              <Box
                 sx={{
-                  minWidth: 50,
-                  width: 50,
-                  height: 58,
-                  borderRadius: 3,
-                  border: 1.5,
-                  borderColor: alpha(theme.palette.text.secondary, 0.12),
-                  borderBottom: 4,
-                  borderBottomColor: alpha(theme.palette.common.black, 0.28),
-                  bgcolor: alpha(theme.palette.background.paper, 0.92),
-                  color: "text.primary",
-                  fontFamily: SERIF_FONT,
-                  fontSize: 26,
-                  opacity: isUsed ? 0.2 : 1,
+                  display: "flex",
+                  flexWrap: "wrap",
+                  justifyContent: "center",
+                  gap: 0.75,
                 }}
               >
-                {tile.value.toLocaleUpperCase()}
-              </Button>
-            );
-          })}
+                {(() => {
+                  let playableIndex = 0;
+
+                  return currentCard.answerUnits.map((unit, unitIndex) => {
+                    if (!unit.isPlayable) {
+                      return (
+                        <Box
+                          key={`fixed-${unitIndex}`}
+                          sx={{
+                            minWidth: 22,
+                            height: 52,
+                            px: 0.5,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            fontFamily: displayFont,
+                            fontSize: 24,
+                            color:
+                              checkedAnswer && isCorrectAnswer !== null
+                                ? isCorrectAnswer
+                                  ? redesign.accent.success
+                                  : redesign.accent.danger
+                                : redesign.text.secondary,
+                          }}
+                        >
+                          {unit.value}
+                        </Box>
+                      );
+                    }
+
+                    const placementIndex = playableIndex;
+                    const tileId = placements[placementIndex];
+                    const tile = currentCard.trayTiles.find(
+                      (candidate) => candidate.id === tileId,
+                    );
+                    const displayValue = tile?.value ?? "_";
+                    playableIndex += 1;
+
+                    return (
+                      <Button
+                        key={`slot-${unitIndex}`}
+                        onClick={() => handleRemovePlacement(placementIndex)}
+                        variant="text"
+                        sx={{
+                          minWidth: 44,
+                          width: 44,
+                          height: 52,
+                          p: 0,
+                          borderRadius: 1.25,
+                          borderBottom: `3px solid ${
+                            checkedAnswer && isCorrectAnswer !== null
+                              ? isCorrectAnswer
+                                ? redesign.accent.success
+                                : redesign.accent.danger
+                              : tile
+                                ? redesign.accent.warm
+                                : redesign.border
+                          }`,
+                          backgroundColor:
+                            checkedAnswer && isCorrectAnswer !== null
+                              ? isCorrectAnswer
+                                ? redesign.accentBackground.success
+                                : redesign.accentBackground.danger
+                              : tile
+                                ? redesign.surface.tertiary
+                                : "transparent",
+                          color:
+                            checkedAnswer && isCorrectAnswer !== null
+                              ? isCorrectAnswer
+                                ? redesign.accent.success
+                                : redesign.accent.danger
+                              : tile
+                                ? redesign.text.primary
+                                : redesign.text.secondary,
+                          fontFamily: displayFont,
+                          fontSize: 24,
+                          pointerEvents: checkedAnswer ? "none" : "auto",
+                        }}
+                      >
+                        {displayValue.toLocaleUpperCase()}
+                      </Button>
+                    );
+                  });
+                })()}
+              </Box>
+            </Box>
+          </Tooltip>
+
+          {checkedAnswer && isCorrectAnswer !== null ? (
+            <Stack
+              direction="row"
+              spacing={1}
+              alignItems="center"
+              justifyContent="center"
+              sx={{
+                color: isCorrectAnswer
+                  ? redesign.accent.success
+                  : redesign.accent.danger,
+                mb: 2.5,
+              }}
+            >
+              {isCorrectAnswer ? (
+                <CheckCircleRoundedIcon fontSize="small" />
+              ) : (
+                <ErrorOutlineRoundedIcon fontSize="small" />
+              )}
+              <Typography sx={{ fontWeight: 600 }}>
+                {isCorrectAnswer
+                  ? `${currentAttempt} ✓`
+                  : getTranslation("buildWord.tryAgain")}
+              </Typography>
+            </Stack>
+          ) : null}
+
+          <Typography
+            sx={{
+              textAlign: "center",
+              color: redesign.text.secondary,
+              fontSize: 12,
+              mb: 1.25,
+            }}
+          >
+            {getTranslation("buildWord.trayLabel")}
+          </Typography>
+
+          <Box
+            sx={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "center",
+              gap: 1,
+              mb: 3,
+            }}
+          >
+            {currentCard.trayTiles.map((tile) => {
+              const isUsed = usedTileIds.has(tile.id);
+
+              return (
+                <Button
+                  key={tile.id}
+                  onClick={() => handlePlaceTile(tile.id)}
+                  variant="text"
+                  disabled={isUsed || checkedAnswer || savingAnswer}
+                  sx={{
+                    minWidth: 50,
+                    width: 50,
+                    height: 58,
+                    borderRadius: 1.5,
+                    border: `1.5px solid ${redesign.border}`,
+                    borderBottom: `4px solid ${redesign.surface.tertiary}`,
+                    backgroundColor: redesign.surface.secondary,
+                    color: redesign.text.primary,
+                    fontFamily: displayFont,
+                    fontSize: 26,
+                    opacity: isUsed ? 0.2 : 1,
+                  }}
+                >
+                  {tile.value.toLocaleUpperCase()}
+                </Button>
+              );
+            })}
+          </Box>
         </Box>
 
         <Box
           sx={{
             mt: "auto",
-            pt: 2,
-            borderTop: 1,
-            borderColor: alpha(theme.palette.text.secondary, 0.12),
+            px: 3,
+            py: 2,
+            borderTop: `1px solid ${redesign.border}`,
+            backgroundColor: redesign.surface.primary,
             display: "flex",
             gap: 1.5,
           }}
@@ -880,8 +963,9 @@ export default function BuildWordGamePage() {
             sx={{
               flex: 1,
               py: 1.5,
-              borderRadius: 3,
-              color: hintUsed ? "text.secondary" : "text.primary",
+              borderRadius: radii.small,
+              borderColor: redesign.border,
+              color: hintUsed ? redesign.text.secondary : redesign.text.primary,
             }}
           >
             {hintUsed
@@ -902,10 +986,15 @@ export default function BuildWordGamePage() {
             sx={{
               flex: 2,
               py: 1.5,
-              borderRadius: 3,
-              bgcolor: checkedAnswer ? ACCENT_COLOR : SUCCESS_COLOR,
+              borderRadius: radii.small,
+              backgroundColor: checkedAnswer
+                ? redesign.accent.warm
+                : redesign.accent.success,
+              color: redesign.text.primary,
               "&:hover": {
-                bgcolor: checkedAnswer ? ACCENT_COLOR : SUCCESS_COLOR,
+                backgroundColor: checkedAnswer
+                  ? redesign.accent.warm
+                  : redesign.accent.success,
               },
             }}
           >
@@ -915,6 +1004,14 @@ export default function BuildWordGamePage() {
           </Button>
         </Box>
       </Box>
-    </Box>
+    </RedesignedScreenShell>
+  );
+}
+
+export default function BuildWordGamePage() {
+  return (
+    <RedesignedThemeProvider>
+      <BuildWordGameScreen />
+    </RedesignedThemeProvider>
   );
 }

@@ -8,6 +8,7 @@ import {
     XpProgressViewModel,
 } from "@/app/components/redesigned/quests/types";
 import { getUserDocument } from "@/lib/firebase";
+import { redesignedQuestDefinitions } from "@/lib/redesigned/quests";
 import { Deck, LanguageQuestProgress, User } from "@/lib/types";
 import {
     clearActiveDeckIdCookie,
@@ -29,35 +30,9 @@ const DEFAULT_PROGRESS: LanguageQuestProgress = {
     updatedAt: null,
 };
 
-const QUESTS: QuestCardViewModel[] = [
-    {
-        id: "match-5",
-        name: "Match 5",
-        description: "Connect English words to their translations",
-        icon: "🔗",
-        tone: "match",
-        rewardXp: 30,
-        lives: 3,
-    },
-    {
-        id: "build-word",
-        name: "Build a Word",
-        description: "Arrange the letters to spell the study word",
-        icon: "🔤",
-        tone: "build",
-        rewardXp: 25,
-        lives: 3,
-    },
-    {
-        id: "guess-translation",
-        name: "Guess Translation",
-        description: "Choose the correct meaning for each study word",
-        icon: "🃏",
-        tone: "guess",
-        rewardXp: 20,
-        lives: 3,
-    },
-];
+const QUESTS: QuestCardViewModel[] = redesignedQuestDefinitions.map(
+    ({ routeSegment, ...quest }) => quest,
+);
 
 const TABS: Omit<BottomTabItemViewModel, "active">[] = [
     { id: "quests", label: "Quests", icon: "⚡" },

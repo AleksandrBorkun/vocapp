@@ -20,8 +20,13 @@ import HomeRoundedIcon from "@mui/icons-material/HomeRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import ErrorState from "@/app/components/common/ErrorState";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
+import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedThemeProvider";
+import LivesDisplay from "@/app/components/redesigned/primitives/LivesDisplay";
+import RedesignedScreenShell from "@/app/components/redesigned/primitives/RedesignedScreenShell";
+import RewardBadge from "@/app/components/redesigned/primitives/RewardBadge";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
+import { getRedesignedQuestByRoute } from "@/lib/redesigned/quests";
 import { getTranslation } from "@/lib/translations";
 import { Word } from "@/lib/types";
 import {
@@ -32,7 +37,12 @@ import {
 
 const ROUND_SIZE = 10;
 const ANSWER_OPTIONS = 4;
-const SERIF_FONT = '"Fraunces", Georgia, serif';
+const CORRECT_ANSWER_DELTA = 0.05;
+const WRONG_ANSWER_DELTA = 0.02;
+const GUESS_QUEST = getRedesignedQuestByRoute("guess-translation");
+const GUESS_REWARD_XP = GUESS_QUEST?.rewardXp ?? 20;
+const GUESS_MAX_LIVES = GUESS_QUEST?.maxLives ?? GUESS_QUEST?.lives ?? 3;
+
 type GameCard = {
   deckIndex: number;
   word: string;
@@ -74,11 +84,14 @@ function buildGameRound(words: Word[]) {
   }));
 }
 
-export default function GuessTranslationPage() {
+function GuessTranslationScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const deckId = params.id as string;
+  const redesign = theme.vocappRedesign.palette;
+  const displayFont = theme.vocappRedesign.fonts.display;
+  const radii = theme.vocappRedesign.radii;
 
   const { user, loading: authLoading } = useAuth({ requireAuth: true });
   const {
@@ -86,7 +99,7 @@ export default function GuessTranslationPage() {
     loading: deckLoading,
     error,
     loadDeck,
-    updateWordAccuracy,
+    submitStudyResults,
   } = useWords();
 
   const [round, setRound] = useState<GameCard[]>([]);
@@ -100,6 +113,10 @@ export default function GuessTranslationPage() {
   const [roundComplete, setRoundComplete] = useState(false);
   const [savingAnswer, setSavingAnswer] = useState(false);
   const [gameError, setGameError] = useState<string | null>(null);
+  const [remainingLives, setRemainingLives] = useState(GUESS_MAX_LIVES);
+  const [pendingUpdates, setPendingUpdates] = useState<
+    Array<{ wordIndex: number; delta: number }>
+  >([]);
 
   const loading = authLoading || deckLoading;
   const currentCard = round[currentCardIndex] ?? null;
@@ -112,7 +129,6 @@ export default function GuessTranslationPage() {
     setSelectedOption(null);
     setIsCorrectSelection(null);
     setIsCardFlipped(false);
-    setSavingAnswer(false);
   }
 
   function startRound(nextWords: Word[]) {
@@ -121,6 +137,9 @@ export default function GuessTranslationPage() {
     setCorrectAnswers(0);
     setRoundComplete(false);
     setGameError(null);
+    setRemainingLives(GUESS_MAX_LIVES);
+    setPendingUpdates([]);
+    setSavingAnswer(false);
     resetTurnState();
   }
 
@@ -136,7 +155,7 @@ export default function GuessTranslationPage() {
     }
   }, [deck?.id]);
 
-  async function handleSelectOption(option: string) {
+  function handleSelectOption(option: string) {
     if (!currentCard || answered || savingAnswer) {
       return;
     }
@@ -145,15 +164,49 @@ export default function GuessTranslationPage() {
 
     setSelectedOption(option);
     setIsCorrectSelection(isCorrect);
+    setPendingUpdates((previous) => [
+      ...previous,
+      {
+        wordIndex: currentCard.deckIndex,
+        delta: isCorrect ? CORRECT_ANSWER_DELTA : -WRONG_ANSWER_DELTA,
+      },
+    ]);
 
     if (isCorrect) {
       setCorrectAnswers((previous) => previous + 1);
+      return;
+    }
+
+    setRemainingLives((previous) => Math.max(0, previous - 1));
+  }
+
+  async function handleNextCard() {
+    if (!answered || savingAnswer) {
+      return;
+    }
+
+    if (currentCardIndex < round.length - 1) {
+      setCurrentCardIndex((previous) => previous + 1);
+      resetTurnState();
+      return;
+    }
+
+    if (!user || !deck) {
+      setGameError("Failed to save answer progress");
+      return;
     }
 
     setSavingAnswer(true);
 
     try {
-      await updateWordAccuracy(deckId, currentCard.deckIndex, isCorrect);
+      await submitStudyResults({
+        deckId,
+        userId: user.uid,
+        languageCode: deck.study,
+        xpReward: GUESS_REWARD_XP,
+        updates: pendingUpdates,
+      });
+      setRoundComplete(true);
     } catch (updateError) {
       setGameError(
         updateError instanceof Error
@@ -163,20 +216,6 @@ export default function GuessTranslationPage() {
     } finally {
       setSavingAnswer(false);
     }
-  }
-
-  function handleNextCard() {
-    if (!answered || savingAnswer) {
-      return;
-    }
-
-    if (currentCardIndex === round.length - 1) {
-      setRoundComplete(true);
-      return;
-    }
-
-    setCurrentCardIndex((previous) => previous + 1);
-    resetTurnState();
   }
 
   function handleRetryLoad() {
@@ -210,426 +249,443 @@ export default function GuessTranslationPage() {
 
   if (roundComplete) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          color: "text.primary",
-          px: { xs: 2, sm: 3 },
-          py: { xs: 3, sm: 5 },
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{
-              minWidth: 0,
-              width: 44,
-              height: 44,
-              borderRadius: 3,
-            }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
-          <Typography
-            variant="h4"
-            sx={{ fontFamily: SERIF_FONT, fontWeight: 300 }}
-          >
-            {getTranslation("guessTranslation.title")}
-          </Typography>
-        </Box>
-
+      <RedesignedScreenShell>
         <Box
           sx={{
-            flex: 1,
+            px: 3,
+            pt: 3,
+            pb: 4,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
+            minHeight: "100dvh",
           }}
         >
-          <Card
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
+              sx={{
+                minWidth: 0,
+                width: 44,
+                height: 44,
+                borderRadius: radii.small,
+                borderColor: redesign.border,
+                color: redesign.text.primary,
+              }}
+            >
+              <ArrowBackRoundedIcon />
+            </Button>
+            <Typography
+              variant="h4"
+              sx={{ fontFamily: displayFont, fontWeight: 300, flex: 1 }}
+            >
+              {getTranslation("guessTranslation.title")}
+            </Typography>
+            <RewardBadge xp={GUESS_REWARD_XP} />
+          </Box>
+
+          <Box
             sx={{
-              width: "100%",
-              maxWidth: 560,
-              p: { xs: 3, sm: 5 },
-              borderRadius: 6,
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: alpha(theme.palette.text.secondary, 0.18),
-              textAlign: "center",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Typography
-              variant="h3"
-              sx={{ fontFamily: SERIF_FONT, fontWeight: 300, mb: 2 }}
+            <Card
+              sx={{
+                width: "100%",
+                borderRadius: radii.large,
+                px: 3,
+                py: 4,
+                backgroundColor: redesign.surface.secondary,
+                textAlign: "center",
+              }}
             >
-              {getTranslation("guessTranslation.wellDone")}
-            </Typography>
-            <Typography variant="h5" color="text.secondary" mb={4}>
-              {`${correctAnswers}/${round.length} ${getTranslation("guessTranslation.correctAnswers")}`}
-            </Typography>
-
-            <Stack spacing={1.5}>
-              <Button
-                onClick={() => startRound(deck.words)}
-                variant="contained"
-                startIcon={<ReplayRoundedIcon />}
-                sx={{ py: 1.5 }}
+              <Typography
+                variant="h3"
+                sx={{ fontFamily: displayFont, fontWeight: 300, mb: 1.5 }}
               >
-                {getTranslation("guessTranslation.nextRound")}
-              </Button>
-              <Button
-                onClick={() => router.push("/home")}
-                variant="outlined"
-                startIcon={<HomeRoundedIcon />}
-                sx={{ py: 1.5 }}
-              >
-                {getTranslation("guessTranslation.goHome")}
-              </Button>
-            </Stack>
-          </Card>
+                {getTranslation("guessTranslation.wellDone")}
+              </Typography>
+              <Typography sx={{ color: redesign.text.secondary, mb: 2.5 }}>
+                {`${correctAnswers}/${round.length} ${getTranslation("guessTranslation.correctAnswers")}`}
+              </Typography>
+              <Stack spacing={1.5}>
+                <Button
+                  onClick={() => startRound(deck.words)}
+                  variant="contained"
+                  startIcon={<ReplayRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    bgcolor: redesign.accent.warm,
+                    color: redesign.text.primary,
+                    "&:hover": { bgcolor: redesign.accent.warm },
+                  }}
+                >
+                  {getTranslation("guessTranslation.nextRound")}
+                </Button>
+                <Button
+                  onClick={() => router.push("/home")}
+                  variant="outlined"
+                  startIcon={<HomeRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    borderColor: redesign.border,
+                    color: redesign.text.primary,
+                  }}
+                >
+                  {getTranslation("guessTranslation.goHome")}
+                </Button>
+              </Stack>
+            </Card>
+          </Box>
         </Box>
-      </Box>
+      </RedesignedScreenShell>
     );
   }
 
   if (!currentCard) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: 2,
-        }}
-      >
-        <Card
+      <RedesignedScreenShell>
+        <Box
           sx={{
-            width: "100%",
-            maxWidth: 520,
-            p: { xs: 3, sm: 4 },
-            borderRadius: 4,
-            bgcolor: "background.paper",
-            textAlign: "center",
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 3,
           }}
         >
-          <Typography variant="h5" fontWeight={700} mb={1.5}>
-            {getTranslation("guessTranslation.title")}
-          </Typography>
-          <Typography color="text.secondary" mb={3}>
-            {getTranslation("guessTranslation.emptyDeck")}
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => router.push(`/deck/${deckId}`)}
+          <Card
+            sx={{
+              width: "100%",
+              borderRadius: radii.large,
+              px: 3,
+              py: 4,
+              backgroundColor: redesign.surface.secondary,
+              textAlign: "center",
+            }}
           >
-            {getTranslation("guessTranslation.backToDeck")}
-          </Button>
-        </Card>
-      </Box>
+            <Typography
+              variant="h5"
+              sx={{ color: redesign.text.primary, mb: 1.5 }}
+            >
+              {getTranslation("guessTranslation.title")}
+            </Typography>
+            <Typography sx={{ color: redesign.text.secondary, mb: 3 }}>
+              {getTranslation("guessTranslation.emptyDeck")}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push(`/deck/${deckId}`)}
+              sx={{
+                bgcolor: redesign.accent.warm,
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("guessTranslation.backToDeck")}
+            </Button>
+          </Card>
+        </Box>
+      </RedesignedScreenShell>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        color: "text.primary",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box sx={{ px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 }, pb: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{
-              minWidth: 0,
-              width: 44,
-              height: 44,
-              borderRadius: 3,
-              borderColor: alpha(theme.palette.text.secondary, 0.24),
-            }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
-
-          <Typography
-            variant="h4"
-            sx={{
-              flex: 1,
-              fontFamily: SERIF_FONT,
-              fontWeight: 300,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {getTranslation("guessTranslation.title")}
-          </Typography>
-
-          <Box sx={{ display: "flex", gap: 0.5, fontSize: "1.1rem" }}>
-            <Box component="span">❤</Box>
-            <Box component="span" sx={{ opacity: 0.25 }}>
-              ❤
-            </Box>
-            <Box component="span" sx={{ opacity: 0.25 }}>
-              ❤
-            </Box>
-          </Box>
-        </Box>
-
-        <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 3 }}>
-          {round.map((_, index) => {
-            const isDone = index < currentCardIndex;
-            const isCurrent = index === currentCardIndex;
-
-            return (
-              <Box
-                key={`progress-${index}`}
-                sx={{
-                  height: 8,
-                  width: isCurrent ? 20 : 8,
-                  borderRadius: 999,
-                  bgcolor: isDone
-                    ? "success.main"
-                    : isCurrent
-                      ? "warning.main"
-                      : alpha(theme.palette.text.secondary, 0.22),
-                  transition: "all 150ms ease",
-                }}
-              />
-            );
-          })}
-          <Typography
-            sx={{ ml: "auto", color: "text.secondary", fontSize: 13 }}
-          >
-            {`${getTranslation("guessTranslation.card")} ${currentCardIndex + 1} / ${round.length}`}
-          </Typography>
-        </Box>
-      </Box>
-
+    <RedesignedScreenShell>
       <Box
-        sx={{
-          flex: 1,
-          px: { xs: 2, sm: 3 },
-          pb: { xs: 2, sm: 3 },
-          display: "flex",
-          flexDirection: "column",
-          maxWidth: 720,
-          width: "100%",
-          mx: "auto",
-        }}
+        sx={{ display: "flex", minHeight: "100dvh", flexDirection: "column" }}
       >
-        <Card
-          onClick={() => setIsCardFlipped((previous) => !previous)}
-          sx={{
-            p: { xs: 3, sm: 5 },
-            mt: 1,
-            mb: 4,
-            borderRadius: 6,
-            bgcolor: alpha(theme.palette.background.paper, 0.92),
-            border: 1,
-            borderColor: alpha(theme.palette.text.secondary, 0.16),
-            boxShadow: "0 24px 64px rgba(0, 0, 0, 0.28)",
-            textAlign: "center",
-            cursor: "pointer",
-          }}
-        >
-          <Typography
-            sx={{
-              color: alpha(theme.palette.text.secondary, 0.64),
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              fontSize: 11,
-              mb: 1.5,
-            }}
-          >
-            {isCardFlipped
-              ? getTranslation("guessTranslation.translationLabel")
-              : `${deck.study} → ${deck.language}`}
-          </Typography>
-
-          <Typography
-            variant="h2"
-            sx={{
-              fontFamily: SERIF_FONT,
-              fontWeight: 300,
-              letterSpacing: "-0.04em",
-              fontSize: { xs: "3rem", sm: "4rem" },
-              lineHeight: 1,
-            }}
-          >
-            {isCardFlipped ? currentCard.translation : currentCard.word}
-          </Typography>
-
-          <Typography sx={{ color: "text.secondary", mt: 1.5 }}>
-            {`${getTranslation("guessTranslation.fromDeck")}: ${deck.name}`}
-          </Typography>
-
-          {isCardFlipped && currentCard.example ? (
-            <Typography
-              sx={{ color: "text.secondary", mt: 2, fontStyle: "italic" }}
+        <Box sx={{ px: 3, pt: 3, pb: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
+              sx={{
+                minWidth: 0,
+                width: 36,
+                height: 36,
+                borderRadius: 1.25,
+                borderColor: redesign.border,
+                backgroundColor: redesign.surface.secondary,
+                color: redesign.text.primary,
+              }}
             >
-              {`"${currentCard.example}"`}
+              <ArrowBackRoundedIcon fontSize="small" />
+            </Button>
+
+            <Typography
+              variant="h4"
+              sx={{
+                flex: 1,
+                fontFamily: displayFont,
+                fontWeight: 300,
+                letterSpacing: "-0.02em",
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("guessTranslation.title")}
             </Typography>
-          ) : null}
 
-          <Stack
-            direction="row"
-            spacing={0.75}
-            justifyContent="flex-end"
-            alignItems="center"
-            sx={{ mt: 3, color: alpha(theme.palette.text.secondary, 0.72) }}
-          >
-            <FlipRoundedIcon sx={{ fontSize: 16 }} />
-            <Typography sx={{ fontSize: 12 }}>
-              {getTranslation("guessTranslation.tapToFlip")}
-            </Typography>
-          </Stack>
-        </Card>
+            <LivesDisplay lives={remainingLives} maxLives={GUESS_MAX_LIVES} />
+          </Box>
 
-        <Typography
-          sx={{ color: "text.secondary", mb: 2, textAlign: "center" }}
-        >
-          {`${getTranslation("guessTranslation.whatDoes")} "${currentCard.word}" ${getTranslation("guessTranslation.mean")}`}
-        </Typography>
-
-        <Tooltip
-          arrow
-          disableFocusListener
-          disableHoverListener
-          disableTouchListener
-          open={answered && isCorrectSelection === false}
-          placement="top"
-          title={tooltipMessage}
-        >
-          <Box
-            sx={{
-              display: "grid",
-              gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
-              gap: 1.25,
-            }}
-          >
-            {currentCard.options.map((option) => {
-              const isSelected = option === selectedOption;
-              const isCorrectOption = option === currentCard.translation;
-              const isWrongSelection =
-                isSelected && isCorrectSelection === false;
-              const isCorrectReveal = answered && isCorrectOption;
+          <Box sx={{ display: "flex", alignItems: "center", gap: 0.75, mt: 3 }}>
+            {round.map((_, index) => {
+              const isDone = index < currentCardIndex;
+              const isCurrent = index === currentCardIndex;
 
               return (
-                <Button
-                  key={`${currentCard.deckIndex}-${option}`}
-                  onClick={() => handleSelectOption(option)}
-                  variant="outlined"
-                  disabled={answered}
+                <Box
+                  key={`progress-${index}`}
                   sx={{
-                    py: 2.25,
-                    px: 2,
-                    borderRadius: 4,
-                    borderWidth: 1.5,
-                    fontSize: "1rem",
-                    textTransform: "none",
-                    justifyContent: "center",
-                    bgcolor: isCorrectReveal
-                      ? alpha(theme.palette.success.main, 0.12)
-                      : isWrongSelection
-                        ? alpha(theme.palette.error.main, 0.12)
-                        : isSelected
-                          ? alpha(theme.palette.warning.main, 0.12)
-                          : alpha(theme.palette.background.paper, 0.88),
-                    borderColor: isCorrectReveal
-                      ? alpha(theme.palette.success.main, 0.5)
-                      : isWrongSelection
-                        ? alpha(theme.palette.error.main, 0.5)
-                        : isSelected
-                          ? theme.palette.warning.main
-                          : alpha(theme.palette.text.secondary, 0.2),
-                    color: isCorrectReveal
-                      ? "success.main"
-                      : isWrongSelection
-                        ? "error.main"
-                        : "text.primary",
-                    "&:hover": {
-                      borderColor: isCorrectReveal
-                        ? alpha(theme.palette.success.main, 0.5)
-                        : theme.palette.warning.main,
-                      bgcolor: isCorrectReveal
-                        ? alpha(theme.palette.success.main, 0.12)
-                        : alpha(theme.palette.warning.main, 0.1),
-                    },
-                    "&.Mui-disabled": {
-                      color: isCorrectReveal
-                        ? theme.palette.success.main
-                        : isWrongSelection
-                          ? theme.palette.error.main
-                          : theme.palette.text.primary,
-                      borderColor: isCorrectReveal
-                        ? alpha(theme.palette.success.main, 0.5)
-                        : isWrongSelection
-                          ? alpha(theme.palette.error.main, 0.5)
-                          : alpha(theme.palette.text.secondary, 0.2),
-                    },
+                    height: 8,
+                    width: isCurrent ? 20 : 8,
+                    borderRadius: 999,
+                    backgroundColor: isDone
+                      ? redesign.accent.success
+                      : isCurrent
+                        ? redesign.accent.warm
+                        : redesign.surface.tertiary,
+                    transition: "all 150ms ease",
                   }}
-                >
-                  {option}
-                </Button>
+                />
               );
             })}
+            <Typography
+              sx={{ ml: "auto", color: redesign.text.secondary, fontSize: 13 }}
+            >
+              {`${getTranslation("guessTranslation.card")} ${currentCardIndex + 1} / ${round.length}`}
+            </Typography>
           </Box>
-        </Tooltip>
+        </Box>
+
+        <Box
+          sx={{
+            flex: 1,
+            px: 3,
+            pb: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Card
+            onClick={() => setIsCardFlipped((previous) => !previous)}
+            sx={{
+              px: 3,
+              py: 5,
+              mb: 4,
+              borderRadius: 3,
+              backgroundColor: redesign.surface.secondary,
+              borderColor: redesign.border,
+              boxShadow: "0 8px 40px rgba(0, 0, 0, 0.4)",
+              textAlign: "center",
+              cursor: "pointer",
+              position: "relative",
+            }}
+          >
+            <Typography
+              sx={{
+                color: redesign.text.muted,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontSize: 11,
+                mb: 1.5,
+              }}
+            >
+              {isCardFlipped
+                ? getTranslation("guessTranslation.translationLabel")
+                : `${deck.study} → ${deck.language}`}
+            </Typography>
+
+            <Typography
+              variant="h2"
+              sx={{
+                fontFamily: displayFont,
+                fontWeight: 300,
+                letterSpacing: "-0.04em",
+                fontSize: { xs: "3rem", sm: "3.5rem" },
+                lineHeight: 1,
+                color: redesign.text.primary,
+              }}
+            >
+              {isCardFlipped ? currentCard.translation : currentCard.word}
+            </Typography>
+
+            <Typography
+              sx={{ color: redesign.text.muted, mt: 1.5, fontSize: 13 }}
+            >
+              {`${getTranslation("guessTranslation.fromDeck")}: ${deck.name}`}
+            </Typography>
+
+            {isCardFlipped && currentCard.example ? (
+              <Typography
+                sx={{
+                  color: redesign.text.secondary,
+                  mt: 2,
+                  fontStyle: "italic",
+                }}
+              >
+                {`"${currentCard.example}"`}
+              </Typography>
+            ) : null}
+
+            <Stack
+              direction="row"
+              spacing={0.75}
+              justifyContent="flex-end"
+              alignItems="center"
+              sx={{ mt: 3, color: redesign.text.muted }}
+            >
+              <FlipRoundedIcon sx={{ fontSize: 16 }} />
+              <Typography sx={{ fontSize: 12 }}>
+                {getTranslation("guessTranslation.tapToFlip")}
+              </Typography>
+            </Stack>
+          </Card>
+
+          <Typography
+            sx={{
+              color: redesign.text.secondary,
+              mb: 2,
+              textAlign: "center",
+              fontSize: 14,
+            }}
+          >
+            {`${getTranslation("guessTranslation.whatDoes")} "${currentCard.word}" ${getTranslation("guessTranslation.mean")}`}
+          </Typography>
+
+          <Tooltip
+            arrow
+            disableFocusListener
+            disableHoverListener
+            disableTouchListener
+            open={answered && isCorrectSelection === false}
+            placement="top"
+            title={tooltipMessage}
+          >
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: 1.25,
+              }}
+            >
+              {currentCard.options.map((option) => {
+                const isSelected = option === selectedOption;
+                const isCorrectOption = option === currentCard.translation;
+                const isWrongSelection =
+                  isSelected && isCorrectSelection === false;
+                const isCorrectReveal = answered && isCorrectOption;
+
+                return (
+                  <Button
+                    key={`${currentCard.deckIndex}-${option}`}
+                    onClick={() => handleSelectOption(option)}
+                    variant="outlined"
+                    disabled={answered}
+                    sx={{
+                      py: 2.25,
+                      px: 1.5,
+                      borderRadius: radii.medium,
+                      borderWidth: 1.5,
+                      fontSize: "1rem",
+                      textTransform: "none",
+                      justifyContent: "center",
+                      backgroundColor: isCorrectReveal
+                        ? redesign.accentBackground.success
+                        : isWrongSelection
+                          ? redesign.accentBackground.danger
+                          : isSelected
+                            ? redesign.accentBackground.warm
+                            : redesign.surface.secondary,
+                      borderColor: isCorrectReveal
+                        ? alpha(redesign.accent.success, 0.5)
+                        : isWrongSelection
+                          ? alpha(redesign.accent.danger, 0.5)
+                          : isSelected
+                            ? redesign.accent.warm
+                            : redesign.border,
+                      color: isCorrectReveal
+                        ? redesign.accent.success
+                        : isWrongSelection
+                          ? redesign.accent.danger
+                          : redesign.text.primary,
+                      "&:hover": {
+                        borderColor: isCorrectReveal
+                          ? alpha(redesign.accent.success, 0.5)
+                          : redesign.accent.warm,
+                        backgroundColor: isCorrectReveal
+                          ? redesign.accentBackground.success
+                          : alpha(redesign.accent.warm, 0.1),
+                      },
+                      "&.Mui-disabled": {
+                        color: isCorrectReveal
+                          ? redesign.accent.success
+                          : isWrongSelection
+                            ? redesign.accent.danger
+                            : redesign.text.primary,
+                        borderColor: isCorrectReveal
+                          ? alpha(redesign.accent.success, 0.5)
+                          : isWrongSelection
+                            ? alpha(redesign.accent.danger, 0.5)
+                            : redesign.border,
+                      },
+                    }}
+                  >
+                    {option}
+                  </Button>
+                );
+              })}
+            </Box>
+          </Tooltip>
+        </Box>
 
         {answered ? (
           <Box
             sx={{
               mt: "auto",
-              pt: 2,
-              pb: { xs: 2, sm: 1 },
+              px: 3,
+              py: 2,
+              backgroundColor: isCorrectSelection
+                ? redesign.accentBackground.success
+                : redesign.accentBackground.danger,
+              borderTop: `1px solid ${isCorrectSelection ? alpha(redesign.accent.success, 0.2) : alpha(redesign.accent.danger, 0.2)}`,
             }}
           >
-            <Box
-              sx={{
-                p: 2,
-                borderRadius: 4,
-                display: "flex",
-                alignItems: "center",
-                gap: 1.5,
-                bgcolor:
-                  isCorrectSelection === true
-                    ? alpha(theme.palette.success.main, 0.12)
-                    : alpha(theme.palette.error.main, 0.12),
-                border: 1,
-                borderColor:
-                  isCorrectSelection === true
-                    ? alpha(theme.palette.success.main, 0.24)
-                    : alpha(theme.palette.error.main, 0.24),
-              }}
-            >
-              {isCorrectSelection === true ? (
-                <CheckCircleRoundedIcon color="success" />
+            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+              {isCorrectSelection ? (
+                <CheckCircleRoundedIcon
+                  sx={{ color: redesign.accent.success, fontSize: 28 }}
+                />
               ) : (
-                <ErrorOutlineRoundedIcon color="error" />
+                <ErrorOutlineRoundedIcon
+                  sx={{ color: redesign.accent.danger, fontSize: 28 }}
+                />
               )}
 
               <Box sx={{ flex: 1 }}>
                 <Typography
                   fontWeight={700}
-                  color={
-                    isCorrectSelection === true ? "success.main" : "error.main"
-                  }
+                  sx={{
+                    color: isCorrectSelection
+                      ? redesign.accent.success
+                      : redesign.accent.danger,
+                  }}
                 >
-                  {isCorrectSelection === true
+                  {isCorrectSelection
                     ? getTranslation("guessTranslation.correct")
                     : getTranslation("guessTranslation.notQuite")}
                 </Typography>
-                <Typography color="text.secondary" sx={{ mt: 0.25 }}>
-                  {isCorrectSelection === true
+                <Typography
+                  sx={{
+                    color: redesign.text.secondary,
+                    mt: 0.25,
+                    fontSize: 13,
+                  }}
+                >
+                  {isCorrectSelection
                     ? getTranslation("guessTranslation.correctFeedback")
                     : `"${currentCard.word}" means ${currentCard.translation}. ${getTranslation("guessTranslation.keepGoing")}`}
                 </Typography>
@@ -642,22 +698,9 @@ export default function GuessTranslationPage() {
                 sx={{
                   minWidth: 120,
                   py: 1.25,
-                  bgcolor:
-                    isCorrectSelection === true
-                      ? "success.main"
-                      : "warning.main",
-                  color:
-                    isCorrectSelection === true
-                      ? theme.palette.success.contrastText
-                      : theme.palette.getContrastText(
-                          theme.palette.warning.main,
-                        ),
-                  "&:hover": {
-                    bgcolor:
-                      isCorrectSelection === true
-                        ? "success.dark"
-                        : "warning.dark",
-                  },
+                  bgcolor: redesign.accent.warm,
+                  color: redesign.text.primary,
+                  "&:hover": { bgcolor: redesign.accent.warm },
                 }}
               >
                 {savingAnswer ? (
@@ -670,6 +713,14 @@ export default function GuessTranslationPage() {
           </Box>
         ) : null}
       </Box>
-    </Box>
+    </RedesignedScreenShell>
+  );
+}
+
+export default function GuessTranslationPage() {
+  return (
+    <RedesignedThemeProvider>
+      <GuessTranslationScreen />
+    </RedesignedThemeProvider>
   );
 }
