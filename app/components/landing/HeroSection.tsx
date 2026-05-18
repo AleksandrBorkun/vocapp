@@ -10,6 +10,11 @@ interface HeroSectionProps {
   description: string;
   ctaText: string;
   ctaLink: string;
+  features: Array<{
+    icon: string;
+    title: string;
+    description: string;
+  }>;
 }
 
 /**
@@ -17,7 +22,7 @@ interface HeroSectionProps {
  * the hero banner, call-to-action button, and feature cards.
  */
 const HeroSection: React.FC<HeroSectionProps> = React.memo(
-  ({ title, highlightText, description, ctaText, ctaLink }) => {
+  ({ title, highlightText, description, ctaText, ctaLink, features }) => {
     return (
       <Box
         component="main"
@@ -94,21 +99,14 @@ const HeroSection: React.FC<HeroSectionProps> = React.memo(
         {/* Features */}
         <Container maxWidth="lg" sx={{ mt: { xs: 8, sm: 12 }, width: "100%" }}>
           <Grid container spacing={{ xs: 3, sm: 4 }}>
-            <FeatureCard
-              icon="📚"
-              title="Create Card Sets"
-              description="Build your own flashcard collections for any subject or language"
-            />
-            <FeatureCard
-              icon="🧠"
-              title="Study Anytime"
-              description="Practice on any device with our mobile-friendly interface"
-            />
-            <FeatureCard
-              icon="📈"
-              title="Track Progress"
-              description="Monitor your learning journey and master new words efficiently"
-            />
+            {features.map((feature) => (
+              <FeatureCard
+                key={feature.title}
+                icon={feature.icon}
+                title={feature.title}
+                description={feature.description}
+              />
+            ))}
           </Grid>
         </Container>
       </Box>

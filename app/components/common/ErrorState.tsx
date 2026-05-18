@@ -2,6 +2,7 @@ import { memo } from "react";
 import { useRouter } from "next/navigation";
 import { Box, Card, Typography, Button } from "@mui/material";
 import { containerStyles, cardStyles } from "@/lib/constants/styles";
+import { getTranslation } from "@/lib/translations";
 
 interface ErrorStateProps {
   error: string;
@@ -44,14 +45,14 @@ function ErrorState({
         }}
       >
         <Typography variant="h5" fontWeight="bold" color="error" mb={2}>
-          Error
+          {getTranslation("common.error.title")}
         </Typography>
         <Typography color="text.primary" mb={3}>
           {error}
         </Typography>
         <Box sx={{ display: "flex", gap: 1.5 }}>
           <Button onClick={handleRetry} variant="contained" sx={{ flex: 1 }}>
-            Retry
+            {getTranslation("common.actions.retry")}
           </Button>
           {showBackToLogin && (
             <Button
@@ -59,7 +60,7 @@ function ErrorState({
               variant="outlined"
               sx={{ flex: 1 }}
             >
-              Back to Login
+              {getTranslation("common.actions.backToLogin")}
             </Button>
           )}
         </Box>

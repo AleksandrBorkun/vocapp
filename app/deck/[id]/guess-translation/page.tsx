@@ -122,7 +122,10 @@ function GuessTranslationScreen() {
   const currentCard = round[currentCardIndex] ?? null;
   const answered = selectedOption !== null;
   const tooltipMessage = currentCard
-    ? `"${currentCard.word}" means ${currentCard.translation}. ${getTranslation("guessTranslation.keepGoing")}`
+    ? getTranslation("guessTranslation.incorrectFeedback", {
+        word: currentCard.word,
+        translation: currentCard.translation,
+      })
     : "";
 
   function resetTurnState() {
@@ -192,7 +195,7 @@ function GuessTranslationScreen() {
     }
 
     if (!user || !deck) {
-      setGameError("Failed to save answer progress");
+      setGameError(getTranslation("guessTranslation.errors.saveProgress"));
       return;
     }
 
@@ -212,7 +215,7 @@ function GuessTranslationScreen() {
       setGameError(
         updateError instanceof Error
           ? updateError.message
-          : "Failed to save answer progress",
+          : getTranslation("guessTranslation.errors.saveProgress"),
       );
     } finally {
       setSavingAnswer(false);
@@ -231,7 +234,11 @@ function GuessTranslationScreen() {
   if (error || gameError) {
     return (
       <ErrorState
-        error={error || gameError || "Unable to load the game"}
+        error={
+          error ||
+          gameError ||
+          getTranslation("guessTranslation.errors.unableToLoad")
+        }
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
@@ -241,13 +248,18 @@ function GuessTranslationScreen() {
   if (!deck) {
     return (
       <ErrorState
-        error="Deck not found"
+        error={getTranslation("guessTranslation.errors.deckNotFound")}
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
     );
   }
-
+  {
+    getTranslation("guessTranslation.scoreSummary", {
+      correctAnswers,
+      roundLength: round.length,
+    });
+  }
   if (roundComplete) {
     return (
       <RedesignedScreenShell>
@@ -457,7 +469,10 @@ function GuessTranslationScreen() {
             <Typography
               sx={{ ml: "auto", color: redesign.text.secondary, fontSize: 13 }}
             >
-              {`${getTranslation("guessTranslation.card")} ${currentCardIndex + 1} / ${round.length}`}
+              {getTranslation("guessTranslation.cardProgress", {
+                current: currentCardIndex + 1,
+                total: round.length,
+              })}
             </Typography>
           </Box>
         </Box>
@@ -517,7 +532,9 @@ function GuessTranslationScreen() {
             <Typography
               sx={{ color: redesign.text.muted, mt: 1.5, fontSize: 13 }}
             >
-              {`${getTranslation("guessTranslation.fromDeck")}: ${deck.name}`}
+              {getTranslation("guessTranslation.fromDeckLabel", {
+                deckName: deck.name,
+              })}
             </Typography>
 
             {isCardFlipped && currentCard.example ? (
@@ -554,7 +571,9 @@ function GuessTranslationScreen() {
               fontSize: 14,
             }}
           >
-            {`${getTranslation("guessTranslation.whatDoes")} "${currentCard.word}" ${getTranslation("guessTranslation.mean")}`}
+            {getTranslation("guessTranslation.questionPrompt", {
+              word: currentCard.word,
+            })}
           </Typography>
 
           <Tooltip
@@ -688,7 +707,10 @@ function GuessTranslationScreen() {
                 >
                   {isCorrectSelection
                     ? getTranslation("guessTranslation.correctFeedback")
-                    : `"${currentCard.word}" means ${currentCard.translation}. ${getTranslation("guessTranslation.keepGoing")}`}
+                    : getTranslation("guessTranslation.incorrectFeedback", {
+                        word: currentCard.word,
+                        translation: currentCard.translation,
+                      })}
                 </Typography>
               </Box>
 

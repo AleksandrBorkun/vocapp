@@ -221,7 +221,10 @@ function MatchTranslationScreen() {
     setWrongAttempt({
       sourceDeckIndex: selectedWord.deckIndex,
       translationDeckIndex: deckIndex,
-      message: `"${selectedWord.word}" means ${selectedWord.translation}. ${getTranslation("matchTranslation.keepTrying")}`,
+      message: getTranslation("matchTranslation.incorrectFeedback", {
+        word: selectedWord.word,
+        translation: selectedWord.translation,
+      }),
     });
     setSelectedWordDeckIndex(null);
   }
@@ -238,7 +241,7 @@ function MatchTranslationScreen() {
     }
 
     if (!user || !deck) {
-      setGameError("Failed to save match progress");
+      setGameError(getTranslation("matchTranslation.errors.saveProgress"));
       return;
     }
 
@@ -259,7 +262,7 @@ function MatchTranslationScreen() {
       setGameError(
         updateError instanceof Error
           ? updateError.message
-          : "Failed to save match progress",
+          : getTranslation("matchTranslation.errors.saveProgress"),
       );
     } finally {
       setSavingRound(false);
@@ -296,7 +299,11 @@ function MatchTranslationScreen() {
   if (error || gameError) {
     return (
       <ErrorState
-        error={error || gameError || "Unable to load the game"}
+        error={
+          error ||
+          gameError ||
+          getTranslation("matchTranslation.errors.unableToLoad")
+        }
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
@@ -306,13 +313,18 @@ function MatchTranslationScreen() {
   if (!deck) {
     return (
       <ErrorState
-        error="Deck not found"
+        error={getTranslation("matchTranslation.errors.deckNotFound")}
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
     );
   }
-
+  {
+    getTranslation("matchTranslation.scoreSummary", {
+      perfectMatches,
+      totalWords,
+    });
+  }
   if (sessionComplete) {
     return (
       <RedesignedScreenShell>
@@ -508,7 +520,10 @@ function MatchTranslationScreen() {
                 mb: 1,
               }}
             >
-              {`${getTranslation("matchTranslation.round")} ${currentRoundIndex + 1} ${getTranslation("matchTranslation.of")} ${rounds.length}`}
+              {getTranslation("matchTranslation.roundProgress", {
+                current: currentRoundIndex + 1,
+                total: rounds.length,
+              })}
             </Typography>
             <Box
               sx={{

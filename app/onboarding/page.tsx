@@ -6,6 +6,7 @@ import { createUserDocument } from "@/lib/firebase";
 import { LANGUAGES } from "@/lib/constants/languages";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
 import { useAuth } from "@/app/hooks/useAuth";
+import { getLanguageLabel, getTranslation } from "@/lib/translations";
 import {
   Box,
   Container,
@@ -36,12 +37,12 @@ export default function OnboardingPage() {
     e.preventDefault();
 
     if (!nativeLanguage) {
-      setError("Please select your native language");
+      setError(getTranslation("onboarding.errors.selectNativeLanguage"));
       return;
     }
 
     if (!user) {
-      setError("No user found. Please log in again.");
+      setError(getTranslation("onboarding.errors.noUser"));
       return;
     }
 
@@ -49,12 +50,15 @@ export default function OnboardingPage() {
     setError(null);
 
     try {
-      const name = user.displayName || user.email?.split("@")[0] || "User";
+      const name =
+        user.displayName ||
+        user.email?.split("@")[0] ||
+        getTranslation("onboarding.defaults.userName");
       await createUserDocument(user.uid, nativeLanguage, name);
       router.push("/home");
     } catch (err) {
       console.error("Error creating user document:", err);
-      setError("Failed to complete onboarding. Please try again.");
+      setError(getTranslation("onboarding.errors.completeFailed"));
       setSubmitting(false);
     }
   };
@@ -92,7 +96,7 @@ export default function OnboardingPage() {
               textAlign: "center",
             }}
           >
-            Welcome!
+            {getTranslation("onboarding.title")}
           </Typography>
 
           <Typography
@@ -103,7 +107,7 @@ export default function OnboardingPage() {
               textAlign: "center",
             }}
           >
-            Let's get started by setting up your profile
+            {getTranslation("onboarding.subtitle")}
           </Typography>
 
           {error && (
@@ -118,13 +122,13 @@ export default function OnboardingPage() {
                 id="native-language-label"
                 sx={{ color: "text.secondary" }}
               >
-                Native Language
+                {getTranslation("onboarding.field.nativeLanguage")}
               </InputLabel>
               <Select
                 labelId="native-language-label"
                 id="native-language"
                 value={nativeLanguage}
-                label="Native Language"
+                label={getTranslation("onboarding.field.nativeLanguage")}
                 onChange={(e) => setNativeLanguage(e.target.value)}
                 sx={{
                   color: "text.primary",
@@ -141,7 +145,7 @@ export default function OnboardingPage() {
               >
                 {LANGUAGES.map((lang) => (
                   <MenuItem key={lang.code} value={lang.code}>
-                    {lang.name}
+                    {getLanguageLabel(lang.code)}
                   </MenuItem>
                 ))}
               </Select>
@@ -166,7 +170,9 @@ export default function OnboardingPage() {
                 },
               }}
             >
-              {submitting ? "Creating Profile..." : "Continue"}
+              {submitting
+                ? getTranslation("onboarding.button.creatingProfile")
+                : getTranslation("onboarding.button.continue")}
             </Button>
           </form>
         </Paper>
