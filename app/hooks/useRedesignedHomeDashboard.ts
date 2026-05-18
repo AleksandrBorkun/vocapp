@@ -8,7 +8,10 @@ import {
     XpProgressViewModel,
 } from "@/app/components/redesigned/quests/types";
 import { getUserDocument } from "@/lib/firebase";
-import { redesignedQuestDefinitions } from "@/lib/redesigned/quests";
+import {
+    getRedesignedQuestById,
+    redesignedQuestDefinitions,
+} from "@/lib/redesigned/quests";
 import { Deck, LanguageQuestProgress, User } from "@/lib/types";
 import {
     clearActiveDeckIdCookie,
@@ -28,6 +31,7 @@ const DEFAULT_PROGRESS: LanguageQuestProgress = {
     streak: 0,
     lastCompletedOn: null,
     updatedAt: null,
+    completedToday: [],
 };
 
 const QUESTS: QuestCardViewModel[] = redesignedQuestDefinitions.map(
@@ -80,6 +84,67 @@ function formatGreeting(name: string, now: Date) {
     const safeName = name.trim() || "there";
 
     return `${salutation}, ${safeName} 👋`;
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+    return (
+        left.getFullYear() === right.getFullYear() &&
+        left.getMonth() === right.getMonth() &&
+        left.getDate() === right.getDate()
+    );
+}
+
+function formatCompletedTime(timestamp: string) {
+    const completedAt = new Date(timestamp);
+
+    if (Number.isNaN(completedAt.getTime())) {
+        return "";
+    }
+
+    return new Intl.DateTimeFormat("en-US", {
+        hour: "numeric",
+        minute: "2-digit",
+        hour12: true,
+    })
+        .format(completedAt)
+        .toLowerCase();
+}
+
+function getCompletedQuests(
+    progress: LanguageQuestProgress,
+    now: Date,
+): CompletedQuestViewModel[] {
+    return (progress.completedToday ?? [])
+        .map((entry) => {
+            const quest = getRedesignedQuestById(entry.questId);
+            const completedAt = new Date(entry.completedAt);
+
+            if (!quest || Number.isNaN(completedAt.getTime())) {
+                return null;
+            }
+
+            if (!isSameCalendarDay(completedAt, now)) {
+                return null;
+            }
+
+            return {
+                timestamp: completedAt.getTime(),
+                item: {
+                    id: quest.id,
+                    name: quest.name,
+                    rewardXp: quest.rewardXp,
+                    completedAt: formatCompletedTime(entry.completedAt),
+                },
+            };
+        })
+        .filter(
+            (
+                entry,
+            ): entry is { timestamp: number; item: CompletedQuestViewModel } =>
+                entry !== null,
+        )
+        .sort((left, right) => right.timestamp - left.timestamp)
+        .map(({ item }) => item);
 }
 
 export function getLevelTitle(level: number) {
@@ -230,6 +295,7 @@ export function useRedesignedHomeDashboard(
         : "No active deck";
     const languageProgress = getLanguageProgress(userDoc, activeDeck);
     const quests = activeDeck ? QUESTS : [];
+    const completed = getCompletedQuests(languageProgress, now);
 
     return {
         loading,
@@ -243,7 +309,7 @@ export function useRedesignedHomeDashboard(
         },
         progress: toProgressViewModel(languageProgress),
         quests,
-        completed: [],
+        completed,
         tabs: getRedesignedTabs("quests"),
         emptyQuestMessage: activeDeck
             ? null

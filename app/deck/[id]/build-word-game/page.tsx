@@ -405,6 +405,7 @@ function BuildWordGameScreen() {
         deckId,
         userId: user.uid,
         languageCode: deck.study,
+        questId: "build-word",
         xpReward: BUILD_REWARD_XP,
         updates: pendingUpdates,
       });

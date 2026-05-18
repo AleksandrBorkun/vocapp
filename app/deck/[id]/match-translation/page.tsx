@@ -249,6 +249,7 @@ function MatchTranslationScreen() {
         deckId,
         userId: user.uid,
         languageCode: deck.study,
+        questId: "match-5",
         xpReward: MATCH_REWARD_XP,
         updates: pendingSessionUpdates,
       });

@@ -17,6 +17,7 @@ export interface SubmitStudyResultsParams {
     deckId: string;
     userId: string;
     languageCode: string;
+    questId: string;
     xpReward: number;
     updates: WordAccuracyUpdate[];
 }
@@ -301,7 +302,7 @@ export function useWords(): UseWordsReturn {
     );
 
     const submitStudyResults = useCallback(
-        async ({ deckId, userId, languageCode, xpReward, updates }: SubmitStudyResultsParams) => {
+        async ({ deckId, userId, languageCode, questId, xpReward, updates }: SubmitStudyResultsParams) => {
             if (!db || !deck) {
                 throw new Error('Firestore not initialized or deck not loaded');
             }
@@ -316,6 +317,7 @@ export function useWords(): UseWordsReturn {
                     deckId,
                     updatedWords,
                     languageCode,
+                    questId,
                     xpReward,
                 });
 

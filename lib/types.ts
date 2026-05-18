@@ -1,8 +1,14 @@
+export interface QuestCompletionEntry {
+    questId: string;
+    completedAt: string;
+}
+
 export interface LanguageQuestProgress {
     totalXp: number;
     streak: number;
     lastCompletedOn?: string | null;
     updatedAt?: string | null;
+    completedToday?: QuestCompletionEntry[];
 }
 
 export type QuestProgressByLanguage = Record<string, LanguageQuestProgress>;

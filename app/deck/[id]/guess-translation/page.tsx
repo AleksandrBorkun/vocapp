@@ -203,6 +203,7 @@ function GuessTranslationScreen() {
         deckId,
         userId: user.uid,
         languageCode: deck.study,
+        questId: "guess-translation",
         xpReward: GUESS_REWARD_XP,
         updates: pendingUpdates,
       });

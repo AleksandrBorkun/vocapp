@@ -8,7 +8,12 @@ import {
   setDoc,
   writeBatch,
 } from 'firebase/firestore';
-import { QuestProgressByLanguage, User, Word } from './types';
+import {
+  QuestCompletionEntry,
+  QuestProgressByLanguage,
+  User,
+  Word,
+} from './types';
 import { normalizeLanguageCode } from './utils/languageMapper';
 
 const firebaseConfig = {
@@ -50,6 +55,52 @@ if (typeof window !== 'undefined') {
 
 export { app, auth, db };
 
+function normalizeCompletedToday(
+  completedToday: QuestCompletionEntry[] | undefined,
+): QuestCompletionEntry[] {
+  if (!Array.isArray(completedToday)) {
+    return [];
+  }
+
+  return completedToday.filter(
+    (entry): entry is QuestCompletionEntry =>
+      typeof entry?.questId === 'string' && typeof entry?.completedAt === 'string',
+  );
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function upsertCompletedToday(
+  existingEntries: QuestCompletionEntry[],
+  questId: string,
+  timestamp: string,
+) {
+  const completedAt = new Date(timestamp);
+  const nextEntries = existingEntries.filter((entry) => {
+    const entryDate = new Date(entry.completedAt);
+
+    if (Number.isNaN(entryDate.getTime())) {
+      return false;
+    }
+
+    return isSameCalendarDay(entryDate, completedAt) && entry.questId !== questId;
+  });
+
+  return [
+    ...nextEntries,
+    {
+      questId,
+      completedAt: timestamp,
+    },
+  ].sort((left, right) => right.completedAt.localeCompare(left.completedAt));
+}
+
 function normalizeQuestProgress(
   questProgress: User['questProgress'],
 ): QuestProgressByLanguage {
@@ -64,6 +115,7 @@ function normalizeQuestProgress(
         streak: typeof progress?.streak === 'number' ? progress.streak : 0,
         lastCompletedOn: progress?.lastCompletedOn ?? null,
         updatedAt: progress?.updatedAt ?? null,
+        completedToday: normalizeCompletedToday(progress?.completedToday),
       };
 
       return normalized;
@@ -150,6 +202,7 @@ interface SubmitQuestResultsParams {
   deckId: string;
   updatedWords: Word[];
   languageCode: string;
+  questId: string;
   xpReward: number;
 }
 
@@ -158,6 +211,7 @@ export async function submitQuestResults({
   deckId,
   updatedWords,
   languageCode,
+  questId,
   xpReward,
 }: SubmitQuestResultsParams): Promise<void> {
   if (!db) throw new Error('Firestore not initialized');
@@ -175,8 +229,14 @@ export async function submitQuestResults({
       streak: 0,
       lastCompletedOn: null,
       updatedAt: null,
+      completedToday: [],
     };
   const timestamp = new Date().toISOString();
+  const completedToday = upsertCompletedToday(
+    existingProgress.completedToday ?? [],
+    questId,
+    timestamp,
+  );
 
   const batch = writeBatch(db);
   batch.update(deckRef, {
@@ -191,6 +251,7 @@ export async function submitQuestResults({
           totalXp: existingProgress.totalXp + Math.max(0, xpReward),
           lastCompletedOn: timestamp,
           updatedAt: timestamp,
+          completedToday,
         },
       },
     },
