@@ -28,9 +28,8 @@ import RewardBadge from "@/app/components/redesigned/primitives/RewardBadge";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
 import { getRedesignedQuestByRoute } from "@/lib/redesigned/quests";
-import { getTranslation } from "@/lib/translations";
+import { getLanguageLabel, getTranslation } from "@/lib/translations";
 import { Word } from "@/lib/types";
-import { getLanguageName } from "@/lib/utils/languageMapper";
 import {
   IndexedWord,
   selectStudyWords,
@@ -257,7 +256,10 @@ function BuildWordGameScreen() {
     !savingAnswer &&
     placements.includes(null);
   const tooltipMessage = currentCard
-    ? `"${currentCard.prompt}" translates to ${currentCard.answer}. ${getTranslation("buildWord.keepGoing")}`
+    ? getTranslation("buildWord.tooltipFeedback", {
+        prompt: currentCard.prompt,
+        answer: currentCard.answer,
+      })
     : "";
 
   function setTurnState(card: GameCard | null) {
@@ -394,7 +396,7 @@ function BuildWordGameScreen() {
     }
 
     if (!user || !deck) {
-      setGameError("Unable to save build-word progress");
+      setGameError(getTranslation("buildWord.errors.unableToSaveProgress"));
       return;
     }
 
@@ -414,7 +416,7 @@ function BuildWordGameScreen() {
       setGameError(
         updateError instanceof Error
           ? updateError.message
-          : "Failed to save build-word progress",
+          : getTranslation("buildWord.errors.failedToSaveProgress"),
       );
     } finally {
       setSavingAnswer(false);
@@ -433,7 +435,9 @@ function BuildWordGameScreen() {
   if (error || gameError) {
     return (
       <ErrorState
-        error={error || gameError || "Unable to load the game"}
+        error={
+          error || gameError || getTranslation("buildWord.errors.unableToLoad")
+        }
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
@@ -443,13 +447,18 @@ function BuildWordGameScreen() {
   if (!deck) {
     return (
       <ErrorState
-        error="Deck not found"
+        error={getTranslation("buildWord.errors.deckNotFound")}
         onRetry={handleRetryLoad}
         showBackToLogin={false}
       />
     );
   }
-
+  {
+    getTranslation("buildWord.scoreSummary", {
+      correctAnswers,
+      roundLength: round.length,
+    });
+  }
   if (roundComplete) {
     return (
       <RedesignedScreenShell>
@@ -542,7 +551,9 @@ function BuildWordGameScreen() {
                     fontSize: 14,
                   }}
                 >
-                  +{BUILD_REWARD_XP} XP earned
+                  {getTranslation("buildWord.xpEarned", {
+                    xp: BUILD_REWARD_XP,
+                  })}
                 </Typography>
               </Box>
 
@@ -627,7 +638,7 @@ function BuildWordGameScreen() {
     );
   }
 
-  const studyLanguage = getLanguageName(deck.study);
+  const studyLanguage = getLanguageLabel(deck.study);
   const currentAttempt = buildAttempt(currentCard, placements);
 
   return (
@@ -690,7 +701,9 @@ function BuildWordGameScreen() {
                 mb: 1,
               }}
             >
-              {`${getTranslation("buildWord.translateTo")} ${studyLanguage}`}
+              {getTranslation("buildWord.translatePrompt", {
+                language: studyLanguage,
+              })}
             </Typography>
             <Typography
               sx={{

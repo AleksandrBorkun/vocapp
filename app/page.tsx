@@ -5,9 +5,28 @@ import {
   responsiveFontSizes,
   spacing,
 } from "@/lib/constants/styles";
+import { getTranslation } from "@/lib/translations";
 import HeroSection from "./components/landing/HeroSection";
 
 export default function Home() {
+  const features = [
+    {
+      icon: "📚",
+      title: getTranslation("landing.features.createSets.title"),
+      description: getTranslation("landing.features.createSets.description"),
+    },
+    {
+      icon: "🧠",
+      title: getTranslation("landing.features.studyAnytime.title"),
+      description: getTranslation("landing.features.studyAnytime.description"),
+    },
+    {
+      icon: "📈",
+      title: getTranslation("landing.features.trackProgress.title"),
+      description: getTranslation("landing.features.trackProgress.description"),
+    },
+  ];
+
   return (
     <Box
       sx={{
@@ -29,7 +48,7 @@ export default function Home() {
               fontSize: responsiveFontSizes.h3,
             }}
           >
-            VocApp
+            {getTranslation("landing.appName")}
           </Typography>
           <Link href="/login" style={{ textDecoration: "none" }}>
             <Button
@@ -45,7 +64,7 @@ export default function Home() {
                 },
               }}
             >
-              Login
+              {getTranslation("landing.header.login")}
             </Button>
           </Link>
         </Container>
@@ -53,11 +72,12 @@ export default function Home() {
 
       {/* Hero Section with Features */}
       <HeroSection
-        title="Learn New Words"
-        highlightText="The Smart Way"
-        description="Create custom flashcard sets and master new vocabulary at your own pace. Perfect for students, language learners, and anyone expanding their knowledge."
-        ctaText="Get Started"
+        title={getTranslation("landing.hero.title")}
+        highlightText={getTranslation("landing.hero.highlight")}
+        description={getTranslation("landing.hero.description")}
+        ctaText={getTranslation("landing.hero.cta")}
         ctaLink="/login"
+        features={features}
       />
 
       {/* Footer */}
@@ -72,7 +92,7 @@ export default function Home() {
         }}
       >
         <Typography variant="body2" sx={{ fontSize: responsiveFontSizes.body }}>
-          © 2026 VocApp. Learn smarter, not harder.
+          {getTranslation("landing.footer.tagline")}
         </Typography>
       </Box>
     </Box>

@@ -15,6 +15,7 @@ import RedesignedScreenShell from "@/app/components/redesigned/primitives/Redesi
 import { useAuth } from "@/app/hooks/useAuth";
 import { auth } from "@/lib/firebase";
 import { redesignedPalette, redesignedRadii } from "@/lib/redesigned/tokens";
+import { getLanguageLabel, getTranslation } from "@/lib/translations";
 
 function GoogleIcon() {
   return (
@@ -169,19 +170,19 @@ export default function LoginPage() {
   const activeError = authError ?? error;
   const buttonLabel = useMemo(() => {
     if (authLoading) {
-      return "Checking session...";
+      return getTranslation("login.status.checkingSession");
     }
 
     if (submitting) {
-      return "Connecting...";
+      return getTranslation("login.status.connecting");
     }
 
-    return "Continue with Google";
+    return getTranslation("login.button.continueWithGoogle");
   }, [authLoading, submitting]);
 
   const handleGoogleSignIn = async () => {
     if (!auth) {
-      setError("Firebase is not initialized");
+      setError(getTranslation("login.errors.firebaseUnavailable"));
       return;
     }
 
@@ -196,7 +197,7 @@ export default function LoginPage() {
       const errorMessage =
         signInError instanceof Error
           ? signInError.message
-          : "An error occurred. Please try again.";
+          : getTranslation("login.errors.generic");
       setError(errorMessage);
       setSubmitting(false);
     }
@@ -265,10 +266,12 @@ export default function LoginPage() {
                 }}
               >
                 <span>🇬🇧</span>
-                <span>English</span>
-                <span style={{ color: redesignedPalette.text.muted }}>→</span>
+                <span>{getLanguageLabel("en")}</span>
+                <span style={{ color: redesignedPalette.text.muted }}>
+                  {getTranslation("login.hero.languagePairSeparator")}
+                </span>
                 <span>🇪🇸</span>
-                <span>Spanish</span>
+                <span>{getLanguageLabel("es")}</span>
               </Box>
 
               <Typography
@@ -283,7 +286,7 @@ export default function LoginPage() {
                   lineHeight: 0.95,
                 }}
               >
-                Vocado
+                {getTranslation("login.hero.brand")}
               </Typography>
 
               <Typography
@@ -295,7 +298,7 @@ export default function LoginPage() {
                   lineHeight: 1.5,
                 }}
               >
-                Master Languages through{" "}
+                {getTranslation("login.hero.description.beforeEmphasis")}
                 <Box
                   component="span"
                   sx={{
@@ -305,9 +308,9 @@ export default function LoginPage() {
                     color: redesignedPalette.accent.warm,
                   }}
                 >
-                  play
+                  {getTranslation("login.hero.description.emphasis")}
                 </Box>
-                . Build your deck, run your quests.
+                {getTranslation("login.hero.description.afterEmphasis")}
               </Typography>
 
               {activeError ? (
