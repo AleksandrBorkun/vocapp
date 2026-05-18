@@ -79,7 +79,8 @@ const translation: Record<Path, string> = {
   "landing.languages.deck.enDe": "English to German",
   "landing.languages.deck.enAr": "English to Arabic",
   "landing.languages.new": "+ New language",
-  "landing.languages.note": "Spanish is your active deck / open Profile to switch",
+  "landing.languages.note":
+    "Spanish is your active deck / open Profile to switch",
   "landing.install.apple.prefix": "Download on the",
   "landing.install.apple.title": "App Store",
   "landing.install.play.prefix": "Get it on",
@@ -95,12 +96,9 @@ const translation: Record<Path, string> = {
   "landing.install.ios.title": "Add Vocado to your iPhone home screen",
   "landing.install.ios.description":
     "Safari does not show a native install prompt for web apps. Save Vocado manually so it behaves like an app from your main screen.",
-  "landing.install.ios.step1":
-    "Open Vocado in Safari on your iPhone or iPad.",
-  "landing.install.ios.step2":
-    "Tap the Share button in the browser toolbar.",
-  "landing.install.ios.step3":
-    "Choose Add to Home Screen, then confirm Add.",
+  "landing.install.ios.step1": "Open Vocado in Safari on your iPhone or iPad.",
+  "landing.install.ios.step2": "Tap the Share button in the browser toolbar.",
+  "landing.install.ios.step3": "Choose Add to Home Screen, then confirm Add.",
   "landing.install.android.title": "Install Vocado on Android",
   "landing.install.android.descriptionPrompt":
     "The browser install prompt is available from the Google Play button. If you dismissed it, you can also use the browser menu to install the app manually.",

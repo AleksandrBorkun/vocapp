@@ -7,7 +7,8 @@ const faviconSvg =
 
 export const metadata: Metadata = {
   title: "Vocado - Learn any language through play",
-  description: "Build vocabulary decks, play daily quests, and study new words with a flashcard-powered web app.",
+  description:
+    "Build vocabulary decks, play daily quests, and study new words with a flashcard-powered web app.",
   applicationName: "Vocado",
   manifest: "/manifest.webmanifest",
   icons: {
