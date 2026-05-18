@@ -4,7 +4,7 @@ const translation: Record<Path, string> = {
   "common.error.title": "Error",
   "common.actions.retry": "Retry",
   "common.actions.backToLogin": "Back to Login",
-  "landing.appName": "VocApp",
+  "landing.appName": "Vocado",
   "landing.header.login": "Login",
   "landing.hero.title": "Learn New Words",
   "landing.hero.highlight": "The Smart Way",
@@ -21,6 +21,99 @@ const translation: Record<Path, string> = {
   "landing.features.trackProgress.title": "Track Progress",
   "landing.features.trackProgress.description":
     "Monitor your learning journey and master new words efficiently",
+  "landing.nav.scan": "Scan",
+  "landing.nav.games": "Games",
+  "landing.nav.sharing": "Sharing",
+  "landing.nav.languages": "Languages",
+  "landing.nav.download": "Download free",
+  "landing.hero.availability": "Available on iOS and Android",
+  "landing.hero.titleLineOne": "Master any language",
+  "landing.hero.titleLineTwo": "through play.",
+  "landing.hero.descriptionNew":
+    "Build your personal vocabulary deck, run daily quests, and turn words into long-term memory one game at a time.",
+  "landing.hero.downloadNote": "Free to download / No credit card required",
+  "landing.stats.languages": "languages supported",
+  "landing.stats.gameModes": "game modes per deck",
+  "landing.stats.scanWords": "words you can scan",
+  "landing.stats.activeLanguage": "active language at a time",
+  "landing.sections.scan.kicker": "Scan",
+  "landing.sections.scan.title": "Point your camera.",
+  "landing.sections.scan.emphasis": "Tap the words you want.",
+  "landing.sections.scan.body":
+    "See a menu, a street sign, a page in a book and scan it. Vocado detects every word, highlights the ones you tap, and adds them to your deck with automatic translations.",
+  "landing.sections.scan.details":
+    "Works on photos from your camera roll too, so the words you notice in the real world can become part of your next study session in seconds.",
+  "landing.sections.games.kicker": "Memory games",
+  "landing.sections.games.title": "Three games.",
+  "landing.sections.games.emphasis": "Words that stick.",
+  "landing.sections.games.body":
+    "Match pairs under a timer. Build a word from scrambled tiles. Guess the translation before your hearts run out. Every game pulls words from your own deck.",
+  "landing.sections.games.details":
+    "Limited attempts keep each session focused. The point is daily repetition and clarity, not infinite grinding.",
+  "landing.sections.sharing.kicker": "Sharing",
+  "landing.sections.sharing.title": "Your deck.",
+  "landing.sections.sharing.emphasis": "Their game too.",
+  "landing.sections.sharing.body":
+    "Share a deck with a friend by link. They get your full word list and can play the same quests independently, comparing progress on identical vocabulary.",
+  "landing.sections.sharing.details":
+    "Shared decks fit travel, study groups, and pair learning without anyone manually rebuilding the same flashcards.",
+  "landing.sections.languages.kicker": "Any language",
+  "landing.sections.languages.title": "Your language.",
+  "landing.sections.languages.emphasis": "Any direction.",
+  "landing.sections.languages.body":
+    "Vocado learns your native language at sign-up and uses it as the translation baseline. Then you can create separate decks for any target language and switch between them from your profile.",
+  "landing.sections.languages.details":
+    "Only one language stays active at a time, so the home screen and quests always reflect the deck you are actually studying.",
+  "landing.cta.title": "Start building your first deck today.",
+  "landing.cta.description":
+    "Free to download. No subscription required to get started. Unlock premium word packs when you are ready to go deeper.",
+  "landing.footer.privacy": "Privacy",
+  "landing.footer.terms": "Terms",
+  "landing.footer.support": "Support",
+  "landing.footer.pressKit": "Press kit",
+  "landing.footer.copyright": "Copyright 2026 Vocado. Learn anything.",
+  "landing.languages.yourDecks": "Your decks",
+  "landing.languages.deck.enEs": "English to Spanish",
+  "landing.languages.deck.enDa": "English to Danish",
+  "landing.languages.deck.enJa": "English to Japanese",
+  "landing.languages.deck.enDe": "English to German",
+  "landing.languages.deck.enAr": "English to Arabic",
+  "landing.languages.new": "+ New language",
+  "landing.languages.note": "Spanish is your active deck / open Profile to switch",
+  "landing.install.apple.prefix": "Download on the",
+  "landing.install.apple.title": "App Store",
+  "landing.install.play.prefix": "Get it on",
+  "landing.install.play.title": "Google Play",
+  "landing.install.status.installed":
+    "Already installed. Tap either button to open the app.",
+  "landing.install.status.prompt":
+    "This browser can install Vocado directly to your home screen.",
+  "landing.install.status.ios":
+    "On iPhone and iPad, use Safari Share then Add to Home Screen.",
+  "landing.install.status.default":
+    "Install support depends on browser support for web app prompts.",
+  "landing.install.ios.title": "Add Vocado to your iPhone home screen",
+  "landing.install.ios.description":
+    "Safari does not show a native install prompt for web apps. Save Vocado manually so it behaves like an app from your main screen.",
+  "landing.install.ios.step1":
+    "Open Vocado in Safari on your iPhone or iPad.",
+  "landing.install.ios.step2":
+    "Tap the Share button in the browser toolbar.",
+  "landing.install.ios.step3":
+    "Choose Add to Home Screen, then confirm Add.",
+  "landing.install.android.title": "Install Vocado on Android",
+  "landing.install.android.descriptionPrompt":
+    "The browser install prompt is available from the Google Play button. If you dismissed it, you can also use the browser menu to install the app manually.",
+  "landing.install.android.descriptionFallback":
+    "If your browser does not show the install prompt automatically, open the browser menu and choose Install app or Add to Home screen.",
+  "landing.install.android.step1":
+    "Open Vocado in Chrome or another browser with PWA install support.",
+  "landing.install.android.step2":
+    "Tap the browser menu in the top-right corner.",
+  "landing.install.android.step3":
+    "Choose Install app or Add to Home screen and confirm.",
+  "landing.install.actions.close": "Close",
+  "landing.install.actions.open": "Open web app",
   "login.status.checkingSession": "Checking session...",
   "login.status.connecting": "Connecting...",
   "login.button.continueWithGoogle": "Continue with Google",
