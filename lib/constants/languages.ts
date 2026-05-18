@@ -187,6 +187,39 @@ export const PIXABAY_LANGUAGE_MAP: Record<string, string> = {
     zh: "zh",
 };
 
+export const TESSERACT_LANGUAGE_MAP: Record<string, string> = {
+    ar: "ara",
+    cs: "ces",
+    da: "dan",
+    de: "deu",
+    dk: "dan",
+    el: "ell",
+    en: "eng",
+    es: "spa",
+    fi: "fin",
+    fr: "fra",
+    he: "heb",
+    hi: "hin",
+    hu: "hun",
+    id: "ind",
+    it: "ita",
+    ja: "jpn",
+    ko: "kor",
+    ms: "msa",
+    nl: "nld",
+    no: "nor",
+    pl: "pol",
+    pt: "por",
+    ro: "ron",
+    ru: "rus",
+    sv: "swe",
+    th: "tha",
+    tr: "tur",
+    uk: "ukr",
+    vi: "vie",
+    zh: "chi_sim",
+};
+
 /**
  * Maps application language code to DeepL API format
  * @param code - Language code from the application
@@ -203,4 +236,17 @@ export function mapToDeeplCode(code: string): string {
  */
 export function mapToPixabayCode(code: string): string {
     return PIXABAY_LANGUAGE_MAP[code] || "en";
+}
+
+/**
+ * Maps application language code to a Tesseract OCR language code.
+ * Falls back to English if the selected language is not mapped.
+ */
+export function mapToTesseractCode(code: string): string {
+    if (!code) {
+        return "eng";
+    }
+
+    const normalizedCode = code.toLowerCase();
+    return TESSERACT_LANGUAGE_MAP[normalizedCode] || "eng";
 }

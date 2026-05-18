@@ -1,7 +1,20 @@
 import { FirebaseApp, getApp, getApps, initializeApp } from 'firebase/app';
 import { Auth, getAuth } from 'firebase/auth';
-import { doc, Firestore, getDoc, getFirestore, setDoc } from 'firebase/firestore';
-import { User } from './types';
+import {
+  doc,
+  Firestore,
+  getDoc,
+  getFirestore,
+  setDoc,
+  writeBatch,
+} from 'firebase/firestore';
+import {
+  QuestCompletionEntry,
+  QuestProgressByLanguage,
+  User,
+  Word,
+} from './types';
+import { normalizeLanguageCode } from './utils/languageMapper';
 
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
@@ -42,6 +55,88 @@ if (typeof window !== 'undefined') {
 
 export { app, auth, db };
 
+function normalizeCompletedToday(
+  completedToday: QuestCompletionEntry[] | undefined,
+): QuestCompletionEntry[] {
+  if (!Array.isArray(completedToday)) {
+    return [];
+  }
+
+  return completedToday.filter(
+    (entry): entry is QuestCompletionEntry =>
+      typeof entry?.questId === 'string' && typeof entry?.completedAt === 'string',
+  );
+}
+
+function isSameCalendarDay(left: Date, right: Date) {
+  return (
+    left.getFullYear() === right.getFullYear() &&
+    left.getMonth() === right.getMonth() &&
+    left.getDate() === right.getDate()
+  );
+}
+
+function upsertCompletedToday(
+  existingEntries: QuestCompletionEntry[],
+  questId: string,
+  timestamp: string,
+) {
+  const completedAt = new Date(timestamp);
+  const nextEntries = existingEntries.filter((entry) => {
+    const entryDate = new Date(entry.completedAt);
+
+    if (Number.isNaN(entryDate.getTime())) {
+      return false;
+    }
+
+    return isSameCalendarDay(entryDate, completedAt) && entry.questId !== questId;
+  });
+
+  return [
+    ...nextEntries,
+    {
+      questId,
+      completedAt: timestamp,
+    },
+  ].sort((left, right) => right.completedAt.localeCompare(left.completedAt));
+}
+
+function normalizeQuestProgress(
+  questProgress: User['questProgress'],
+): QuestProgressByLanguage {
+  if (!questProgress) {
+    return {};
+  }
+
+  return Object.entries(questProgress).reduce<QuestProgressByLanguage>(
+    (normalized, [languageCode, progress]) => {
+      normalized[languageCode] = {
+        totalXp: typeof progress?.totalXp === 'number' ? progress.totalXp : 0,
+        streak: typeof progress?.streak === 'number' ? progress.streak : 0,
+        lastCompletedOn: progress?.lastCompletedOn ?? null,
+        updatedAt: progress?.updatedAt ?? null,
+        completedToday: normalizeCompletedToday(progress?.completedToday),
+      };
+
+      return normalized;
+    },
+    {},
+  );
+}
+
+function normalizeUserDocument(data: Partial<User>): User {
+  return {
+    vocabIDs: Array.isArray(data.vocabIDs)
+      ? data.vocabIDs.filter((deckId): deckId is string => typeof deckId === 'string')
+      : [],
+    nativeLanguage:
+      typeof data.nativeLanguage === 'string' ? data.nativeLanguage : '',
+    name: typeof data.name === 'string' ? data.name : '',
+    tier: data.tier === 'paid' ? 'paid' : 'free',
+    questProgress: normalizeQuestProgress(data.questProgress),
+  };
+}
+
 /**
  * Creates a user document in Firestore after first login
  */
@@ -57,7 +152,8 @@ export async function createUserDocument(
     vocabIDs: [],
     nativeLanguage,
     name,
-    tier: 'free'
+    tier: 'free',
+    questProgress: {},
   };
 
   await setDoc(userRef, userData);
@@ -74,8 +170,93 @@ export async function getUserDocument(userId: string): Promise<User | null> {
   const userSnap = await getDoc(userRef);
 
   if (userSnap.exists()) {
-    return userSnap.data() as User;
+    const data = userSnap.data() as Partial<User>;
+    const normalizedUser = normalizeUserDocument(data);
+
+    if (data.questProgress === undefined) {
+      await setDoc(
+        userRef,
+        {
+          questProgress: normalizedUser.questProgress,
+        },
+        { merge: true },
+      );
+    }
+
+    return normalizedUser;
   }
 
   return null;
+}
+
+export async function getUserQuestProgress(
+  userId: string,
+): Promise<QuestProgressByLanguage> {
+  const userDoc = await getUserDocument(userId);
+
+  return userDoc?.questProgress ?? {};
+}
+
+interface SubmitQuestResultsParams {
+  userId: string;
+  deckId: string;
+  updatedWords: Word[];
+  languageCode: string;
+  questId: string;
+  xpReward: number;
+}
+
+export async function submitQuestResults({
+  userId,
+  deckId,
+  updatedWords,
+  languageCode,
+  questId,
+  xpReward,
+}: SubmitQuestResultsParams): Promise<void> {
+  if (!db) throw new Error('Firestore not initialized');
+
+  const normalizedLanguageCode = normalizeLanguageCode(languageCode);
+  const deckRef = doc(db, 'decks', deckId);
+  const userRef = doc(db, 'users', userId);
+  const userSnap = await getDoc(userRef);
+  const existingUser = userSnap.exists()
+    ? normalizeUserDocument(userSnap.data() as Partial<User>)
+    : null;
+  const existingProgress =
+    existingUser?.questProgress?.[normalizedLanguageCode] ?? {
+      totalXp: 0,
+      streak: 0,
+      lastCompletedOn: null,
+      updatedAt: null,
+      completedToday: [],
+    };
+  const timestamp = new Date().toISOString();
+  const completedToday = upsertCompletedToday(
+    existingProgress.completedToday ?? [],
+    questId,
+    timestamp,
+  );
+
+  const batch = writeBatch(db);
+  batch.update(deckRef, {
+    words: updatedWords,
+  });
+  batch.set(
+    userRef,
+    {
+      questProgress: {
+        [normalizedLanguageCode]: {
+          ...existingProgress,
+          totalXp: existingProgress.totalXp + Math.max(0, xpReward),
+          lastCompletedOn: timestamp,
+          updatedAt: timestamp,
+          completedToday,
+        },
+      },
+    },
+    { merge: true },
+  );
+
+  await batch.commit();
 }

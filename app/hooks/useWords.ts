@@ -1,4 +1,4 @@
-import { db } from '@/lib/firebase';
+import { db, submitQuestResults } from '@/lib/firebase';
 import { Deck, Word } from '@/lib/types';
 import { doc, getDoc, updateDoc } from 'firebase/firestore';
 import { useCallback, useState } from 'react';
@@ -8,8 +8,53 @@ const MAX_ACCURACY = 1;
 const CORRECT_ANSWER_DELTA = 0.05;
 const WRONG_ANSWER_DELTA = 0.02;
 
+export interface WordAccuracyUpdate {
+    wordIndex: number;
+    delta: number;
+}
+
+export interface SubmitStudyResultsParams {
+    deckId: string;
+    userId: string;
+    languageCode: string;
+    questId: string;
+    xpReward: number;
+    updates: WordAccuracyUpdate[];
+}
+
 function clampAccuracy(value: number) {
     return Math.min(MAX_ACCURACY, Math.max(MIN_ACCURACY, value));
+}
+
+function applyAccuracyUpdates(words: Word[], updates: WordAccuracyUpdate[]) {
+    if (updates.length === 0) {
+        return words;
+    }
+
+    const mergedDeltas = new Map<number, number>();
+
+    updates.forEach(({ wordIndex, delta }) => {
+        const word = words[wordIndex];
+
+        if (!word) {
+            throw new Error('Word not found');
+        }
+
+        mergedDeltas.set(wordIndex, (mergedDeltas.get(wordIndex) ?? 0) + delta);
+    });
+
+    return words.map((word, index) => {
+        const delta = mergedDeltas.get(index);
+
+        if (delta === undefined) {
+            return word;
+        }
+
+        return {
+            ...word,
+            accuracy: clampAccuracy(word.accuracy + delta),
+        };
+    });
 }
 
 export interface UseWordsReturn {
@@ -21,7 +66,8 @@ export interface UseWordsReturn {
     addWord: (deckId: string, word: Word) => Promise<void>;
     deleteWord: (deckId: string, wordIndex: number) => Promise<void>;
     updateWordAccuracy: (deckId: string, wordIndex: number, isCorrect: boolean) => Promise<void>;
-    updateWordAccuracies: (deckId: string, updates: Array<{ wordIndex: number; delta: number }>) => Promise<void>;
+    updateWordAccuracies: (deckId: string, updates: WordAccuracyUpdate[]) => Promise<void>;
+    submitStudyResults: (params: SubmitStudyResultsParams) => Promise<void>;
 }
 
 /**
@@ -215,9 +261,11 @@ export function useWords(): UseWordsReturn {
                 const accuracyDelta = isCorrect
                     ? CORRECT_ANSWER_DELTA
                     : -WRONG_ANSWER_DELTA;
-                const newAccuracy = clampAccuracy(word.accuracy + accuracyDelta);
+                const updatedWords = applyAccuracyUpdates(deck.words, [
+                    { wordIndex, delta: accuracyDelta },
+                ]);
 
-                await updateWord(deckId, wordIndex, { accuracy: newAccuracy });
+                await updateWordsSnapshot(deckId, updatedWords);
             } catch (err) {
                 console.error('Error updating word accuracy:', err);
                 const errorMessage = err instanceof Error ? err.message : 'Failed to update accuracy';
@@ -225,11 +273,11 @@ export function useWords(): UseWordsReturn {
                 throw new Error(errorMessage);
             }
         },
-        [deck, updateWord]
+        [deck, updateWordsSnapshot]
     );
 
     const updateWordAccuracies = useCallback(
-        async (deckId: string, updates: Array<{ wordIndex: number; delta: number }>) => {
+        async (deckId: string, updates: WordAccuracyUpdate[]) => {
             if (!db || !deck) {
                 throw new Error('Firestore not initialized or deck not loaded');
             }
@@ -240,31 +288,7 @@ export function useWords(): UseWordsReturn {
 
             try {
                 setError(null);
-
-                const mergedDeltas = new Map<number, number>();
-
-                updates.forEach(({ wordIndex, delta }) => {
-                    const word = deck.words[wordIndex];
-
-                    if (!word) {
-                        throw new Error('Word not found');
-                    }
-
-                    mergedDeltas.set(wordIndex, (mergedDeltas.get(wordIndex) ?? 0) + delta);
-                });
-
-                const updatedWords = deck.words.map((word, index) => {
-                    const delta = mergedDeltas.get(index);
-
-                    if (delta === undefined) {
-                        return word;
-                    }
-
-                    return {
-                        ...word,
-                        accuracy: clampAccuracy(word.accuracy + delta),
-                    };
-                });
+                const updatedWords = applyAccuracyUpdates(deck.words, updates);
 
                 await updateWordsSnapshot(deckId, updatedWords);
             } catch (err) {
@@ -277,6 +301,40 @@ export function useWords(): UseWordsReturn {
         [deck, updateWordsSnapshot]
     );
 
+    const submitStudyResults = useCallback(
+        async ({ deckId, userId, languageCode, questId, xpReward, updates }: SubmitStudyResultsParams) => {
+            if (!db || !deck) {
+                throw new Error('Firestore not initialized or deck not loaded');
+            }
+
+            try {
+                setError(null);
+
+                const updatedWords = applyAccuracyUpdates(deck.words, updates);
+
+                await submitQuestResults({
+                    userId,
+                    deckId,
+                    updatedWords,
+                    languageCode,
+                    questId,
+                    xpReward,
+                });
+
+                setDeck({
+                    ...deck,
+                    words: updatedWords,
+                });
+            } catch (err) {
+                console.error('Error submitting study results:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Failed to submit study results';
+                setError(errorMessage);
+                throw new Error(errorMessage);
+            }
+        },
+        [deck]
+    );
+
     return {
         deck,
         loading,
@@ -287,5 +345,6 @@ export function useWords(): UseWordsReturn {
         deleteWord,
         updateWordAccuracy,
         updateWordAccuracies,
+        submitStudyResults,
     };
 }

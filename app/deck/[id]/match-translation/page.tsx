@@ -18,8 +18,13 @@ import NavigateNextRoundedIcon from "@mui/icons-material/NavigateNextRounded";
 import ReplayRoundedIcon from "@mui/icons-material/ReplayRounded";
 import ErrorState from "@/app/components/common/ErrorState";
 import FullPageLoading from "@/app/components/common/FullPageLoading";
+import RedesignedThemeProvider from "@/app/components/redesigned/RedesignedThemeProvider";
+import LivesDisplay from "@/app/components/redesigned/primitives/LivesDisplay";
+import RedesignedScreenShell from "@/app/components/redesigned/primitives/RedesignedScreenShell";
+import RewardBadge from "@/app/components/redesigned/primitives/RewardBadge";
 import { useAuth } from "@/app/hooks/useAuth";
 import { useWords } from "@/app/hooks/useWords";
+import { getRedesignedQuestByRoute } from "@/lib/redesigned/quests";
 import { getTranslation } from "@/lib/translations";
 import { Word } from "@/lib/types";
 import {
@@ -32,10 +37,12 @@ const SESSION_SIZE = 20;
 const ROUND_SIZE = 5;
 const CORRECT_ANSWER_DELTA = 0.05;
 const WRONG_ANSWER_DELTA = 0.02;
-const SERIF_FONT = '"Fraunces", Georgia, serif';
 const TILE_HEIGHT = 68;
 const TILE_GAP = 10;
 const CONNECTOR_WIDTH = 40;
+const MATCH_QUEST = getRedesignedQuestByRoute("match-translation");
+const MATCH_REWARD_XP = MATCH_QUEST?.rewardXp ?? 30;
+const MATCH_MAX_LIVES = MATCH_QUEST?.maxLives ?? MATCH_QUEST?.lives ?? 3;
 
 type MatchRound = {
   words: IndexedWord[];
@@ -67,11 +74,14 @@ function buildMatchRounds(words: Word[]) {
   );
 }
 
-export default function MatchTranslationPage() {
+function MatchTranslationScreen() {
   const theme = useTheme();
   const router = useRouter();
   const params = useParams();
   const deckId = params.id as string;
+  const redesign = theme.vocappRedesign.palette;
+  const displayFont = theme.vocappRedesign.fonts.display;
+  const radii = theme.vocappRedesign.radii;
 
   const { user, loading: authLoading } = useAuth({ requireAuth: true });
   const {
@@ -79,7 +89,7 @@ export default function MatchTranslationPage() {
     loading: deckLoading,
     error,
     loadDeck,
-    updateWordAccuracies,
+    submitStudyResults,
   } = useWords();
 
   const [rounds, setRounds] = useState<MatchRound[]>([]);
@@ -91,7 +101,7 @@ export default function MatchTranslationPage() {
   const [roundMissedDeckIndices, setRoundMissedDeckIndices] = useState<
     number[]
   >([]);
-  const [pendingRoundUpdates, setPendingRoundUpdates] = useState<
+  const [pendingSessionUpdates, setPendingSessionUpdates] = useState<
     Array<{ wordIndex: number; delta: number }>
   >([]);
   const [wrongAttempt, setWrongAttempt] = useState<WrongAttempt | null>(null);
@@ -99,6 +109,7 @@ export default function MatchTranslationPage() {
   const [sessionComplete, setSessionComplete] = useState(false);
   const [savingRound, setSavingRound] = useState(false);
   const [gameError, setGameError] = useState<string | null>(null);
+  const [remainingLives, setRemainingLives] = useState(MATCH_MAX_LIVES);
 
   const loading = authLoading || deckLoading;
   const currentRound = rounds[currentRoundIndex] ?? null;
@@ -118,7 +129,6 @@ export default function MatchTranslationPage() {
     setSelectedWordDeckIndex(null);
     setMatchedDeckIndices([]);
     setRoundMissedDeckIndices([]);
-    setPendingRoundUpdates([]);
     setWrongAttempt(null);
   }
 
@@ -129,6 +139,8 @@ export default function MatchTranslationPage() {
     setSessionComplete(false);
     setSavingRound(false);
     setGameError(null);
+    setPendingSessionUpdates([]);
+    setRemainingLives(MATCH_MAX_LIVES);
     resetRoundState();
   }
 
@@ -178,7 +190,7 @@ export default function MatchTranslationPage() {
     }
 
     if (selectedWordDeckIndex === deckIndex) {
-      setPendingRoundUpdates((previous) => [
+      setPendingSessionUpdates((previous) => [
         ...previous,
         { wordIndex: selectedWord.deckIndex, delta: CORRECT_ANSWER_DELTA },
       ]);
@@ -196,7 +208,7 @@ export default function MatchTranslationPage() {
       return;
     }
 
-    setPendingRoundUpdates((previous) => [
+    setPendingSessionUpdates((previous) => [
       ...previous,
       { wordIndex: selectedWord.deckIndex, delta: -WRONG_ANSWER_DELTA },
     ]);
@@ -205,6 +217,7 @@ export default function MatchTranslationPage() {
         ? previous
         : [...previous, selectedWord.deckIndex],
     );
+    setRemainingLives((previous) => Math.max(0, previous - 1));
     setWrongAttempt({
       sourceDeckIndex: selectedWord.deckIndex,
       translationDeckIndex: deckIndex,
@@ -218,19 +231,30 @@ export default function MatchTranslationPage() {
       return;
     }
 
+    if (currentRoundIndex < rounds.length - 1) {
+      setCurrentRoundIndex((previous) => previous + 1);
+      resetRoundState();
+      return;
+    }
+
+    if (!user || !deck) {
+      setGameError("Failed to save match progress");
+      return;
+    }
+
     setSavingRound(true);
 
     try {
-      await updateWordAccuracies(deckId, pendingRoundUpdates);
-
-      if (currentRoundIndex === rounds.length - 1) {
-        resetRoundState();
-        setSessionComplete(true);
-        return;
-      }
-
-      setCurrentRoundIndex((previous) => previous + 1);
+      await submitStudyResults({
+        deckId,
+        userId: user.uid,
+        languageCode: deck.study,
+        questId: "match-5",
+        xpReward: MATCH_REWARD_XP,
+        updates: pendingSessionUpdates,
+      });
       resetRoundState();
+      setSessionComplete(true);
     } catch (updateError) {
       setGameError(
         updateError instanceof Error
@@ -245,6 +269,24 @@ export default function MatchTranslationPage() {
   function handleRetryLoad() {
     setGameError(null);
     loadDeck(deckId);
+  }
+
+  function getMatchedAccent(deckIndex: number) {
+    const matchedOrder = matchedDeckIndices.indexOf(deckIndex);
+
+    if (matchedOrder < 0) {
+      return null;
+    }
+
+    return matchedOrder % 2 === 0
+      ? {
+          color: redesign.accent.warm,
+          background: redesign.accentBackground.warm,
+        }
+      : {
+          color: redesign.accent.success,
+          background: redesign.accentBackground.success,
+        };
   }
 
   if (loading) {
@@ -273,502 +315,511 @@ export default function MatchTranslationPage() {
 
   if (sessionComplete) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          color: "text.primary",
-          px: { xs: 2, sm: 3 },
-          py: { xs: 3, sm: 5 },
-          display: "flex",
-          flexDirection: "column",
-        }}
-      >
-        <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 4 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{ minWidth: 0, width: 44, height: 44, borderRadius: 3 }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
-          <Typography
-            variant="h4"
-            sx={{ fontFamily: SERIF_FONT, fontWeight: 300 }}
-          >
-            {getTranslation("matchTranslation.title")}
-          </Typography>
-        </Box>
-
+      <RedesignedScreenShell>
         <Box
           sx={{
-            flex: 1,
+            px: 3,
+            pt: 3,
+            pb: 4,
             display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
+            flexDirection: "column",
+            minHeight: "100dvh",
           }}
         >
-          <Card
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5, mb: 4 }}>
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
+              sx={{
+                minWidth: 0,
+                width: 44,
+                height: 44,
+                borderRadius: radii.small,
+                borderColor: redesign.border,
+                color: redesign.text.primary,
+              }}
+            >
+              <ArrowBackRoundedIcon />
+            </Button>
+            <Typography
+              variant="h4"
+              sx={{ fontFamily: displayFont, fontWeight: 300, flex: 1 }}
+            >
+              {getTranslation("matchTranslation.title")}
+            </Typography>
+            <RewardBadge xp={MATCH_REWARD_XP} />
+          </Box>
+
+          <Box
             sx={{
-              width: "100%",
-              maxWidth: 560,
-              p: { xs: 3, sm: 5 },
-              borderRadius: 6,
-              bgcolor: "background.paper",
-              border: 1,
-              borderColor: alpha(theme.palette.text.secondary, 0.18),
-              textAlign: "center",
+              flex: 1,
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
-            <Typography
-              variant="h3"
-              sx={{ fontFamily: SERIF_FONT, fontWeight: 300, mb: 2 }}
+            <Card
+              sx={{
+                width: "100%",
+                borderRadius: radii.large,
+                px: 3,
+                py: 4,
+                backgroundColor: redesign.surface.secondary,
+                textAlign: "center",
+              }}
             >
-              {getTranslation("matchTranslation.wellDone")}
-            </Typography>
-            <Typography variant="h5" color="text.secondary" mb={4}>
-              {`${perfectMatches}/${totalWords} ${getTranslation("matchTranslation.correctAnswers")}`}
-            </Typography>
+              <Typography
+                variant="h3"
+                sx={{ fontFamily: displayFont, fontWeight: 300, mb: 1.5 }}
+              >
+                {getTranslation("matchTranslation.wellDone")}
+              </Typography>
+              <Typography sx={{ color: redesign.text.secondary, mb: 2.5 }}>
+                {`${perfectMatches}/${totalWords} ${getTranslation("matchTranslation.correctAnswers")}`}
+              </Typography>
 
-            <Stack spacing={1.5}>
-              <Button
-                onClick={() => startSession(deck.words)}
-                variant="contained"
-                startIcon={<ReplayRoundedIcon />}
-                sx={{ py: 1.5 }}
-              >
-                {getTranslation("matchTranslation.nextRound")}
-              </Button>
-              <Button
-                onClick={() => router.push("/home")}
-                variant="outlined"
-                startIcon={<HomeRoundedIcon />}
-                sx={{ py: 1.5 }}
-              >
-                {getTranslation("matchTranslation.goHome")}
-              </Button>
-            </Stack>
-          </Card>
+              <Stack spacing={1.5}>
+                <Button
+                  onClick={() => startSession(deck.words)}
+                  variant="contained"
+                  startIcon={<ReplayRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    bgcolor: redesign.accent.warm,
+                    color: redesign.text.primary,
+                    "&:hover": { bgcolor: redesign.accent.warm },
+                  }}
+                >
+                  {getTranslation("matchTranslation.nextRound")}
+                </Button>
+                <Button
+                  onClick={() => router.push("/home")}
+                  variant="outlined"
+                  startIcon={<HomeRoundedIcon />}
+                  sx={{
+                    py: 1.5,
+                    borderColor: redesign.border,
+                    color: redesign.text.primary,
+                  }}
+                >
+                  {getTranslation("matchTranslation.goHome")}
+                </Button>
+              </Stack>
+            </Card>
+          </Box>
         </Box>
-      </Box>
+      </RedesignedScreenShell>
     );
   }
 
   if (!currentRound) {
     return (
-      <Box
-        sx={{
-          minHeight: "100vh",
-          bgcolor: "background.default",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          px: 2,
-        }}
-      >
-        <Card
+      <RedesignedScreenShell>
+        <Box
           sx={{
-            width: "100%",
-            maxWidth: 520,
-            p: { xs: 3, sm: 4 },
-            borderRadius: 4,
-            bgcolor: "background.paper",
-            textAlign: "center",
+            minHeight: "100dvh",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            px: 3,
           }}
         >
-          <Typography variant="h5" fontWeight={700} mb={1.5}>
-            {getTranslation("matchTranslation.title")}
-          </Typography>
-          <Typography color="text.secondary" mb={3}>
-            {getTranslation("matchTranslation.emptyDeck")}
-          </Typography>
-          <Button
-            variant="contained"
-            onClick={() => router.push(`/deck/${deckId}`)}
+          <Card
+            sx={{
+              width: "100%",
+              borderRadius: radii.large,
+              px: 3,
+              py: 4,
+              backgroundColor: redesign.surface.secondary,
+              textAlign: "center",
+            }}
           >
-            {getTranslation("matchTranslation.backToDeck")}
-          </Button>
-        </Card>
-      </Box>
+            <Typography
+              variant="h5"
+              sx={{ color: redesign.text.primary, mb: 1.5 }}
+            >
+              {getTranslation("matchTranslation.title")}
+            </Typography>
+            <Typography sx={{ color: redesign.text.secondary, mb: 3 }}>
+              {getTranslation("matchTranslation.emptyDeck")}
+            </Typography>
+            <Button
+              variant="contained"
+              onClick={() => router.push(`/deck/${deckId}`)}
+              sx={{
+                bgcolor: redesign.accent.warm,
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("matchTranslation.backToDeck")}
+            </Button>
+          </Card>
+        </Box>
+      </RedesignedScreenShell>
     );
   }
 
   return (
-    <Box
-      sx={{
-        minHeight: "100vh",
-        bgcolor: "background.default",
-        color: "text.primary",
-        display: "flex",
-        flexDirection: "column",
-      }}
-    >
-      <Box sx={{ px: { xs: 2, sm: 3 }, pt: { xs: 2, sm: 3 }, pb: 2 }}>
-        <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-          <Button
-            onClick={() => router.push(`/deck/${deckId}`)}
-            variant="outlined"
-            sx={{
-              minWidth: 0,
-              width: 44,
-              height: 44,
-              borderRadius: 3,
-              borderColor: alpha(theme.palette.text.secondary, 0.24),
-            }}
-          >
-            <ArrowBackRoundedIcon />
-          </Button>
+    <RedesignedScreenShell>
+      <Box
+        sx={{ display: "flex", minHeight: "100dvh", flexDirection: "column" }}
+      >
+        <Box sx={{ px: 3, pt: 3, pb: 2.5 }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Button
+              onClick={() => router.push(`/deck/${deckId}`)}
+              variant="outlined"
+              sx={{
+                minWidth: 0,
+                width: 36,
+                height: 36,
+                borderRadius: 1.25,
+                borderColor: redesign.border,
+                backgroundColor: redesign.surface.secondary,
+                color: redesign.text.primary,
+              }}
+            >
+              <ArrowBackRoundedIcon fontSize="small" />
+            </Button>
 
-          <Typography
-            variant="h4"
-            sx={{
-              flex: 1,
-              fontFamily: SERIF_FONT,
-              fontWeight: 300,
-              letterSpacing: "-0.03em",
-            }}
-          >
-            {getTranslation("matchTranslation.title")}
-          </Typography>
+            <Typography
+              variant="h4"
+              sx={{
+                flex: 1,
+                fontFamily: displayFont,
+                fontWeight: 300,
+                letterSpacing: "-0.02em",
+                color: redesign.text.primary,
+              }}
+            >
+              {getTranslation("matchTranslation.title")}
+            </Typography>
+
+            <LivesDisplay lives={remainingLives} maxLives={MATCH_MAX_LIVES} />
+          </Box>
+
+          <Box sx={{ mt: 3 }}>
+            <Typography
+              sx={{
+                color: redesign.text.secondary,
+                textTransform: "uppercase",
+                letterSpacing: "0.08em",
+                fontSize: 11,
+                mb: 1,
+              }}
+            >
+              {`${getTranslation("matchTranslation.round")} ${currentRoundIndex + 1} ${getTranslation("matchTranslation.of")} ${rounds.length}`}
+            </Typography>
+            <Box
+              sx={{
+                height: 4,
+                borderRadius: 999,
+                backgroundColor: redesign.surface.tertiary,
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  height: "100%",
+                  width: `${(100 * (currentRoundIndex + 1)) / rounds.length}%`,
+                  backgroundColor: redesign.accent.warm,
+                }}
+              />
+            </Box>
+          </Box>
 
           <Box
             sx={{
-              px: 1.5,
-              py: 0.75,
-              borderRadius: 99,
-              bgcolor: alpha(theme.palette.warning.main, 0.12),
-              border: 1,
-              borderColor: alpha(theme.palette.warning.main, 0.24),
+              mt: 2.5,
+              px: 2,
+              py: 1.25,
+              borderRadius: 999,
+              display: "inline-flex",
+              alignItems: "center",
+              gap: 1,
+              backgroundColor: redesign.accentBackground.warm,
+              border: `1px solid ${alpha(redesign.accent.warm, 0.25)}`,
             }}
           >
+            <Typography component="span" sx={{ color: redesign.accent.warm }}>
+              ⭐
+            </Typography>
             <Typography
-              sx={{ color: "warning.main", fontSize: 12, fontWeight: 700 }}
+              sx={{
+                color: redesign.accent.warm,
+                fontWeight: 600,
+                fontSize: 14,
+              }}
             >
-              {`${totalWords} ${getTranslation("matchTranslation.words")}`}
+              +{MATCH_REWARD_XP} XP on completion
             </Typography>
           </Box>
         </Box>
 
-        <Box sx={{ mt: 3 }}>
-          <Typography
-            sx={{
-              color: alpha(theme.palette.text.secondary, 0.72),
-              textTransform: "uppercase",
-              letterSpacing: "0.08em",
-              fontSize: 11,
-              mb: 1,
-            }}
+        <Box
+          sx={{
+            flex: 1,
+            px: 3,
+            pb: 0,
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Tooltip
+            open={Boolean(wrongAttempt)}
+            title={wrongAttempt?.message ?? ""}
+            placement="top"
+            arrow
+            disableFocusListener
+            disableHoverListener
+            disableTouchListener
           >
-            {`${getTranslation("matchTranslation.round")} ${currentRoundIndex + 1} ${getTranslation("matchTranslation.of")} ${rounds.length}`}
-          </Typography>
+            <Typography
+              textAlign="center"
+              sx={{ mb: 2.5, color: redesign.text.secondary, fontSize: 14 }}
+            >
+              {getTranslation("matchTranslation.instruction")}
+            </Typography>
+          </Tooltip>
+
           <Box
             sx={{
-              height: 6,
-              borderRadius: 99,
-              bgcolor: alpha(theme.palette.text.secondary, 0.16),
-              overflow: "hidden",
+              position: "relative",
+              display: "flex",
+              minHeight: boardHeight,
             }}
           >
             <Box
+              component="svg"
+              viewBox={`0 0 ${CONNECTOR_WIDTH} ${boardHeight}`}
               sx={{
-                height: "100%",
-                width: `${(100 * (currentRoundIndex + 1)) / rounds.length}%`,
-                bgcolor: "warning.main",
+                position: "absolute",
+                left: "50%",
+                top: 0,
+                transform: "translateX(-50%)",
+                width: CONNECTOR_WIDTH,
+                height: boardHeight,
+                pointerEvents: "none",
+                overflow: "visible",
+                zIndex: 1,
               }}
-            />
-          </Box>
-        </Box>
+            >
+              {currentRound.words.map((word, leftIndex) => {
+                const accent = getMatchedAccent(word.deckIndex);
 
-        <Box
-          sx={{
-            mt: 2.5,
-            px: 2,
-            py: 1.25,
-            borderRadius: 99,
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 1,
-            bgcolor: alpha(theme.palette.warning.main, 0.12),
-            border: 1,
-            borderColor: alpha(theme.palette.warning.main, 0.24),
-          }}
-        >
-          <Typography component="span" sx={{ color: "warning.main" }}>
-            ●
-          </Typography>
-          <Typography
-            sx={{ color: "warning.main", fontWeight: 600, fontSize: 14 }}
-          >
-            {getTranslation("matchTranslation.sessionPill")}
-          </Typography>
-        </Box>
-      </Box>
+                if (!accent) {
+                  return null;
+                }
 
-      <Box
-        sx={{
-          flex: 1,
-          px: { xs: 2, sm: 3 },
-          pb: { xs: 2, sm: 3 },
-          display: "flex",
-          flexDirection: "column",
-          maxWidth: 760,
-          width: "100%",
-          mx: "auto",
-        }}
-      >
-        <Tooltip
-          open={Boolean(wrongAttempt)}
-          title={wrongAttempt?.message ?? ""}
-          placement="top"
-          arrow
-          disableFocusListener
-          disableHoverListener
-          disableTouchListener
-        >
-          <Typography
-            textAlign="center"
-            color="text.secondary"
-            sx={{ mb: 2.5 }}
-          >
-            {getTranslation("matchTranslation.instruction")}
-          </Typography>
-        </Tooltip>
+                const rightIndex = currentRound.translations.findIndex(
+                  (translationWord) =>
+                    translationWord.deckIndex === word.deckIndex,
+                );
 
-        <Box
-          sx={{
-            position: "relative",
-            display: "flex",
-            minHeight: boardHeight,
-          }}
-        >
-          <Box
-            component="svg"
-            viewBox={`0 0 ${CONNECTOR_WIDTH} ${boardHeight}`}
-            sx={{
-              position: "absolute",
-              left: "50%",
-              top: 0,
-              transform: "translateX(-50%)",
-              width: CONNECTOR_WIDTH,
-              height: boardHeight,
-              pointerEvents: "none",
-              overflow: "visible",
-              zIndex: 1,
-            }}
-          >
-            {currentRound.words.map((word, leftIndex) => {
-              if (!matchedDeckIndices.includes(word.deckIndex)) {
-                return null;
-              }
+                if (rightIndex < 0) {
+                  return null;
+                }
 
-              const rightIndex = currentRound.translations.findIndex(
-                (translationWord) =>
-                  translationWord.deckIndex === word.deckIndex,
-              );
+                return (
+                  <line
+                    key={`connector-${word.deckIndex}`}
+                    x1={0}
+                    y1={leftIndex * (TILE_HEIGHT + TILE_GAP) + TILE_HEIGHT / 2}
+                    x2={CONNECTOR_WIDTH}
+                    y2={rightIndex * (TILE_HEIGHT + TILE_GAP) + TILE_HEIGHT / 2}
+                    stroke={accent.color}
+                    strokeWidth={2}
+                    strokeDasharray="4 3"
+                    opacity={0.7}
+                  />
+                );
+              })}
+            </Box>
 
-              if (rightIndex < 0) {
-                return null;
-              }
+            <Box
+              sx={{
+                flex: 1,
+                pr: `${CONNECTOR_WIDTH / 2 + 8}px`,
+                display: "flex",
+                flexDirection: "column",
+                gap: `${TILE_GAP}px`,
+              }}
+            >
+              {currentRound.words.map((word) => {
+                const isSelected = selectedWordDeckIndex === word.deckIndex;
+                const isWrong =
+                  wrongAttempt?.sourceDeckIndex === word.deckIndex;
+                const matchedAccent = getMatchedAccent(word.deckIndex);
 
-              return (
-                <line
-                  key={`connector-${word.deckIndex}`}
-                  x1={0}
-                  y1={leftIndex * (TILE_HEIGHT + TILE_GAP) + TILE_HEIGHT / 2}
-                  x2={CONNECTOR_WIDTH}
-                  y2={rightIndex * (TILE_HEIGHT + TILE_GAP) + TILE_HEIGHT / 2}
-                  stroke={theme.palette.success.main}
-                  strokeWidth={2.5}
-                  strokeDasharray="5 4"
-                  opacity={0.85}
-                />
-              );
-            })}
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              pr: `${CONNECTOR_WIDTH / 2 + 10}px`,
-              display: "flex",
-              flexDirection: "column",
-              gap: `${TILE_GAP}px`,
-            }}
-          >
-            {currentRound.words.map((word) => {
-              const isSelected = selectedWordDeckIndex === word.deckIndex;
-              const isMatched = matchedDeckIndices.includes(word.deckIndex);
-              const isWrong = wrongAttempt?.sourceDeckIndex === word.deckIndex;
-
-              return (
-                <Button
-                  key={`source-${word.deckIndex}`}
-                  onClick={() => handleSelectWord(word.deckIndex)}
-                  variant="outlined"
-                  disabled={savingRound || isMatched}
-                  sx={{
-                    minHeight: TILE_HEIGHT,
-                    borderRadius: 4,
-                    textTransform: "none",
-                    borderWidth: 1.5,
-                    fontSize: 15,
-                    fontWeight: 500,
-                    color: isMatched
-                      ? "success.main"
-                      : isWrong
-                        ? "error.main"
-                        : "text.primary",
-                    bgcolor: isMatched
-                      ? alpha(theme.palette.success.main, 0.12)
-                      : isWrong
-                        ? alpha(theme.palette.error.main, 0.12)
-                        : isSelected
-                          ? alpha(theme.palette.warning.main, 0.12)
-                          : alpha(theme.palette.background.paper, 0.88),
-                    borderColor: isMatched
-                      ? alpha(theme.palette.success.main, 0.4)
-                      : isWrong
-                        ? alpha(theme.palette.error.main, 0.45)
-                        : isSelected
-                          ? theme.palette.warning.main
-                          : alpha(theme.palette.text.secondary, 0.18),
-                    "&:hover": {
-                      borderColor: isMatched
-                        ? alpha(theme.palette.success.main, 0.4)
+                return (
+                  <Button
+                    key={`source-${word.deckIndex}`}
+                    onClick={() => handleSelectWord(word.deckIndex)}
+                    variant="outlined"
+                    disabled={savingRound || Boolean(matchedAccent)}
+                    sx={{
+                      minHeight: TILE_HEIGHT,
+                      borderRadius: 1.75,
+                      textTransform: "none",
+                      borderWidth: 1.5,
+                      fontSize: 15,
+                      fontWeight: 500,
+                      color: matchedAccent
+                        ? matchedAccent.color
                         : isWrong
-                          ? alpha(theme.palette.error.main, 0.45)
-                          : theme.palette.warning.main,
-                      bgcolor: isMatched
-                        ? alpha(theme.palette.success.main, 0.12)
+                          ? redesign.accent.danger
+                          : redesign.text.primary,
+                      backgroundColor: matchedAccent
+                        ? matchedAccent.background
                         : isWrong
-                          ? alpha(theme.palette.error.main, 0.12)
-                          : alpha(theme.palette.warning.main, 0.08),
-                    },
-                    "&.Mui-disabled": {
-                      color: isMatched
-                        ? theme.palette.success.main
-                        : theme.palette.text.primary,
-                      borderColor: isMatched
-                        ? alpha(theme.palette.success.main, 0.4)
-                        : alpha(theme.palette.text.secondary, 0.18),
-                      bgcolor: isMatched
-                        ? alpha(theme.palette.success.main, 0.12)
-                        : alpha(theme.palette.background.paper, 0.88),
-                    },
-                  }}
-                >
-                  {word.word}
-                </Button>
-              );
-            })}
-          </Box>
-
-          <Box
-            sx={{
-              flex: 1,
-              pl: `${CONNECTOR_WIDTH / 2 + 10}px`,
-              display: "flex",
-              flexDirection: "column",
-              gap: `${TILE_GAP}px`,
-            }}
-          >
-            {currentRound.translations.map((word) => {
-              const isMatched = matchedDeckIndices.includes(word.deckIndex);
-              const isWrong =
-                wrongAttempt?.translationDeckIndex === word.deckIndex;
-
-              return (
-                <Button
-                  key={`translation-${word.deckIndex}`}
-                  onClick={() => handleSelectTranslation(word.deckIndex)}
-                  variant="outlined"
-                  disabled={savingRound || isMatched}
-                  sx={{
-                    minHeight: TILE_HEIGHT,
-                    borderRadius: 4,
-                    textTransform: "none",
-                    borderWidth: 1.5,
-                    fontSize: 15,
-                    fontWeight: 500,
-                    color: isMatched
-                      ? "success.main"
-                      : isWrong
-                        ? "error.main"
-                        : "text.primary",
-                    bgcolor: isMatched
-                      ? alpha(theme.palette.success.main, 0.12)
-                      : isWrong
-                        ? alpha(theme.palette.error.main, 0.12)
-                        : alpha(theme.palette.background.paper, 0.88),
-                    borderColor: isMatched
-                      ? alpha(theme.palette.success.main, 0.4)
-                      : isWrong
-                        ? alpha(theme.palette.error.main, 0.45)
-                        : alpha(theme.palette.text.secondary, 0.18),
-                    "&:hover": {
-                      borderColor: isMatched
-                        ? alpha(theme.palette.success.main, 0.4)
-                        : selectedWordDeckIndex === null
-                          ? alpha(theme.palette.text.secondary, 0.18)
-                          : theme.palette.warning.main,
-                      bgcolor: isMatched
-                        ? alpha(theme.palette.success.main, 0.12)
+                          ? redesign.accentBackground.danger
+                          : isSelected
+                            ? redesign.surface.tertiary
+                            : redesign.surface.secondary,
+                      borderColor: matchedAccent
+                        ? alpha(matchedAccent.color, 0.4)
                         : isWrong
-                          ? alpha(theme.palette.error.main, 0.12)
+                          ? alpha(redesign.accent.danger, 0.45)
+                          : isSelected
+                            ? redesign.text.secondary
+                            : redesign.border,
+                      "&:hover": {
+                        borderColor: matchedAccent
+                          ? alpha(matchedAccent.color, 0.4)
+                          : isWrong
+                            ? alpha(redesign.accent.danger, 0.45)
+                            : redesign.text.secondary,
+                        backgroundColor: matchedAccent
+                          ? matchedAccent.background
+                          : isWrong
+                            ? redesign.accentBackground.danger
+                            : redesign.surface.tertiary,
+                      },
+                      "&.Mui-disabled": {
+                        color: matchedAccent
+                          ? matchedAccent.color
+                          : redesign.text.primary,
+                        borderColor: matchedAccent
+                          ? alpha(matchedAccent.color, 0.4)
+                          : redesign.border,
+                        backgroundColor: matchedAccent
+                          ? matchedAccent.background
+                          : redesign.surface.secondary,
+                      },
+                    }}
+                  >
+                    {word.word}
+                  </Button>
+                );
+              })}
+            </Box>
+
+            <Box
+              sx={{
+                flex: 1,
+                pl: `${CONNECTOR_WIDTH / 2 + 8}px`,
+                display: "flex",
+                flexDirection: "column",
+                gap: `${TILE_GAP}px`,
+              }}
+            >
+              {currentRound.translations.map((word) => {
+                const isWrong =
+                  wrongAttempt?.translationDeckIndex === word.deckIndex;
+                const matchedAccent = getMatchedAccent(word.deckIndex);
+
+                return (
+                  <Button
+                    key={`translation-${word.deckIndex}`}
+                    onClick={() => handleSelectTranslation(word.deckIndex)}
+                    variant="outlined"
+                    disabled={savingRound || Boolean(matchedAccent)}
+                    sx={{
+                      minHeight: TILE_HEIGHT,
+                      borderRadius: 1.75,
+                      textTransform: "none",
+                      borderWidth: 1.5,
+                      fontSize: 15,
+                      fontWeight: 500,
+                      color: matchedAccent
+                        ? matchedAccent.color
+                        : isWrong
+                          ? redesign.accent.danger
+                          : redesign.text.primary,
+                      backgroundColor: matchedAccent
+                        ? matchedAccent.background
+                        : isWrong
+                          ? redesign.accentBackground.danger
+                          : redesign.surface.secondary,
+                      borderColor: matchedAccent
+                        ? alpha(matchedAccent.color, 0.4)
+                        : isWrong
+                          ? alpha(redesign.accent.danger, 0.45)
+                          : redesign.border,
+                      "&:hover": {
+                        borderColor: matchedAccent
+                          ? alpha(matchedAccent.color, 0.4)
                           : selectedWordDeckIndex === null
-                            ? alpha(theme.palette.background.paper, 0.88)
-                            : alpha(theme.palette.warning.main, 0.08),
-                    },
-                    "&.Mui-disabled": {
-                      color: isMatched
-                        ? theme.palette.success.main
-                        : theme.palette.text.primary,
-                      borderColor: isMatched
-                        ? alpha(theme.palette.success.main, 0.4)
-                        : alpha(theme.palette.text.secondary, 0.18),
-                      bgcolor: isMatched
-                        ? alpha(theme.palette.success.main, 0.12)
-                        : alpha(theme.palette.background.paper, 0.88),
-                    },
-                  }}
-                >
-                  {word.translation}
-                </Button>
-              );
-            })}
+                            ? redesign.border
+                            : redesign.text.secondary,
+                        backgroundColor: matchedAccent
+                          ? matchedAccent.background
+                          : isWrong
+                            ? redesign.accentBackground.danger
+                            : selectedWordDeckIndex === null
+                              ? redesign.surface.secondary
+                              : redesign.surface.tertiary,
+                      },
+                      "&.Mui-disabled": {
+                        color: matchedAccent
+                          ? matchedAccent.color
+                          : redesign.text.primary,
+                        borderColor: matchedAccent
+                          ? alpha(matchedAccent.color, 0.4)
+                          : redesign.border,
+                        backgroundColor: matchedAccent
+                          ? matchedAccent.background
+                          : redesign.surface.secondary,
+                      },
+                    }}
+                  >
+                    {word.translation}
+                  </Button>
+                );
+              })}
+            </Box>
           </Box>
         </Box>
 
         <Box
           sx={{
             mt: "auto",
-            pt: 2,
+            px: 3,
+            py: 2,
             display: "flex",
             alignItems: "center",
             justifyContent: "space-between",
             gap: 2,
-            borderTop: 1,
-            borderColor: alpha(theme.palette.text.secondary, 0.12),
+            borderTop: `1px solid ${redesign.border}`,
+            backgroundColor: redesign.surface.primary,
           }}
         >
           <Box>
-            <Typography sx={{ color: "text.secondary", fontSize: 13 }}>
+            <Typography sx={{ color: redesign.text.secondary, fontSize: 13 }}>
               {getTranslation("matchTranslation.matched")}
             </Typography>
             <Box sx={{ display: "flex", alignItems: "baseline", gap: 0.5 }}>
               <Typography
                 sx={{
-                  fontFamily: SERIF_FONT,
+                  fontFamily: displayFont,
                   fontWeight: 300,
                   fontSize: 28,
-                  color: "success.main",
+                  color: redesign.accent.success,
                 }}
               >
                 {matchedDeckIndices.length}
               </Typography>
-              <Typography
-                sx={{ color: alpha(theme.palette.text.secondary, 0.72) }}
-              >
+              <Typography sx={{ color: redesign.text.muted }}>
                 {`/ ${currentRound.words.length}`}
               </Typography>
             </Box>
@@ -779,7 +830,13 @@ export default function MatchTranslationPage() {
             variant="contained"
             disabled={!allMatched || savingRound}
             endIcon={savingRound ? undefined : <NavigateNextRoundedIcon />}
-            sx={{ minWidth: 140, py: 1.5 }}
+            sx={{
+              minWidth: 140,
+              py: 1.5,
+              bgcolor: redesign.accent.warm,
+              color: redesign.text.primary,
+              "&:hover": { bgcolor: redesign.accent.warm },
+            }}
           >
             {savingRound ? (
               <CircularProgress size={18} sx={{ color: "inherit" }} />
@@ -789,6 +846,14 @@ export default function MatchTranslationPage() {
           </Button>
         </Box>
       </Box>
-    </Box>
+    </RedesignedScreenShell>
+  );
+}
+
+export default function MatchTranslationPage() {
+  return (
+    <RedesignedThemeProvider>
+      <MatchTranslationScreen />
+    </RedesignedThemeProvider>
   );
 }

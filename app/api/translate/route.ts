@@ -20,11 +20,17 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
     try {
         const { text, sourceLang, targetLang } = await request.json();
+        const inputIsArray = Array.isArray(text);
+        const texts = inputIsArray ? text : [text];
 
         // Validation
-        if (!text || typeof text !== "string" || text.trim() === "") {
+        if (
+            !Array.isArray(texts) ||
+            texts.length === 0 ||
+            texts.some((value) => typeof value !== "string" || value.trim() === "")
+        ) {
             return NextResponse.json(
-                { error: "Text is required and must be a non-empty string" },
+                { error: "Text is required and must be a non-empty string or array of non-empty strings" },
                 { status: 400 }
             );
         }
@@ -58,7 +64,7 @@ export async function POST(request: NextRequest) {
         }
 
         const requestBody: DeepLRequestBody = {
-            text: [text.trim()],
+            text: texts.map((value) => value.trim()),
             target_lang: mappedTargetLang,
         };
 
@@ -109,11 +115,18 @@ export async function POST(request: NextRequest) {
 
         // Extract translated text
         if (data.translations && data.translations.length > 0) {
-            const translation = data.translations[0];
-            return NextResponse.json({
-                translatedText: translation.text,
-                detectedSourceLang: translation.detected_source_language,
-            });
+            const translations = data.translations.map(
+                (translation: { text: string; detected_source_language?: string }) => ({
+                    translatedText: translation.text,
+                    detectedSourceLang: translation.detected_source_language,
+                })
+            );
+
+            if (inputIsArray) {
+                return NextResponse.json({ translations });
+            }
+
+            return NextResponse.json(translations[0]);
         }
 
         return NextResponse.json(

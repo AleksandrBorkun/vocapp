@@ -29,7 +29,24 @@ export interface UseDecksReturn {
     createDeck: (deck: CreateDeckInput) => Promise<void>;
     deleteDeck: (userId: string, deckId: string) => Promise<void>;
     addWordToDeck: (deckId: string, word: Word) => Promise<void>;
+    addWordsToDeck: (deckId: string, words: Word[]) => Promise<number>;
     reloadUserDecks: () => Promise<void>;
+}
+
+function normalizeStoredValue(value: string) {
+    return value.trim().toLowerCase();
+}
+
+function normalizeWordForStorage(word: Word): Word {
+    return {
+        ...word,
+        word: normalizeStoredValue(word.word),
+        translation: normalizeStoredValue(word.translation),
+    };
+}
+
+function getNormalizedWordKey(word: Pick<Word, 'word'>) {
+    return normalizeStoredValue(word.word);
 }
 
 /**
@@ -200,6 +217,20 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
                 throw new Error('Firebase not initialized');
             }
 
+            const normalizedWord = normalizeWordForStorage(word);
+
+            if (!deckId.trim()) {
+                throw new Error('Deck ID is required');
+            }
+
+            if (
+                !normalizedWord.word ||
+                !normalizedWord.translation ||
+                typeof word.accuracy !== 'number'
+            ) {
+                throw new Error('Word, translation, and accuracy are required');
+            }
+
             try {
                 setError(null);
 
@@ -211,8 +242,17 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
                     throw new Error('Deck not found');
                 }
 
+                const duplicateExists = deck.words.some(
+                    (existingWord) =>
+                        getNormalizedWordKey(existingWord) === normalizedWord.word
+                );
+
+                if (duplicateExists) {
+                    throw new Error('This word already exists in the selected deck');
+                }
+
                 // Add the word to the words array
-                const updatedWords = [...deck.words, word];
+                const updatedWords = [...deck.words, normalizedWord];
                 await updateDoc(deckRef, {
                     words: updatedWords,
                 });
@@ -226,6 +266,86 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
             } catch (err) {
                 console.error('Error adding word to deck:', err);
                 const errorMessage = err instanceof Error ? err.message : 'Failed to add word';
+                setError(errorMessage);
+                throw new Error(errorMessage);
+            }
+        },
+        [decks]
+    );
+
+    const addWordsToDeck = useCallback(
+        async (deckId: string, words: Word[]) => {
+            if (!db) {
+                throw new Error('Firebase not initialized');
+            }
+
+            if (!deckId.trim()) {
+                throw new Error('Deck ID is required');
+            }
+
+            if (words.length === 0) {
+                return 0;
+            }
+
+            const normalizedWords = words
+                .map((word) => normalizeWordForStorage(word))
+                .filter(
+                    (word) =>
+                        word.word &&
+                        word.translation &&
+                        typeof word.accuracy === 'number'
+                );
+
+            if (normalizedWords.length !== words.length) {
+                throw new Error('Word, translation, and accuracy are required');
+            }
+
+            try {
+                setError(null);
+
+                const deckRef = doc(db, 'decks', deckId);
+                const deck = decks.find((d) => d.id === deckId);
+                if (!deck) {
+                    throw new Error('Deck not found');
+                }
+
+                const existingWordKeys = new Set(
+                    deck.words.map((existingWord) => getNormalizedWordKey(existingWord))
+                );
+                const batchWordKeys = new Set<string>();
+                const wordsToAdd: Word[] = [];
+
+                for (const normalizedWord of normalizedWords) {
+                    if (
+                        existingWordKeys.has(normalizedWord.word) ||
+                        batchWordKeys.has(normalizedWord.word)
+                    ) {
+                        continue;
+                    }
+
+                    batchWordKeys.add(normalizedWord.word);
+                    wordsToAdd.push(normalizedWord);
+                }
+
+                if (wordsToAdd.length === 0) {
+                    return 0;
+                }
+
+                const updatedWords = [...deck.words, ...wordsToAdd];
+                await updateDoc(deckRef, {
+                    words: updatedWords,
+                });
+
+                setDecks((prevDecks) =>
+                    prevDecks.map((d) =>
+                        d.id === deckId ? { ...d, words: updatedWords } : d
+                    )
+                );
+
+                return wordsToAdd.length;
+            } catch (err) {
+                console.error('Error adding words to deck:', err);
+                const errorMessage = err instanceof Error ? err.message : 'Failed to add words';
                 setError(errorMessage);
                 throw new Error(errorMessage);
             }
@@ -253,6 +373,7 @@ export function useDecks(user: FirebaseUser | null): UseDecksReturn {
         createDeck,
         deleteDeck,
         addWordToDeck,
+        addWordsToDeck,
         reloadUserDecks,
     };
 }
