@@ -28,7 +28,11 @@ const stats = [
 ];
 
 const languageDecks = [
-  { pair: "EN > ES", label: getTranslation("landing.languages.deck.enEs"), active: true },
+  {
+    pair: "EN > ES",
+    label: getTranslation("landing.languages.deck.enEs"),
+    active: true,
+  },
   { pair: "EN > DA", label: getTranslation("landing.languages.deck.enDa") },
   { pair: "EN > JA", label: getTranslation("landing.languages.deck.enJa") },
   { pair: "EN > DE", label: getTranslation("landing.languages.deck.enDe") },
@@ -37,7 +41,13 @@ const languageDecks = [
 
 function BrandMark() {
   return (
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none" aria-hidden="true">
+    <svg
+      width="28"
+      height="28"
+      viewBox="0 0 28 28"
+      fill="none"
+      aria-hidden="true"
+    >
       <rect width="28" height="28" rx="7" fill="#0f0d0a" />
       <ellipse cx="14" cy="14" rx="9.5" ry="11" fill="#2a5535" />
       <ellipse cx="14" cy="14" rx="6.5" ry="8.5" fill="#c8d97a" />
@@ -86,7 +96,10 @@ function SectionHeading({
       >
         {title}
         <br />
-        <Box component="em" sx={{ fontStyle: "italic", color: redesignedPalette.text.secondary }}>
+        <Box
+          component="em"
+          sx={{ fontStyle: "italic", color: redesignedPalette.text.secondary }}
+        >
           {emphasis}
         </Box>
       </Typography>
@@ -151,12 +164,23 @@ function PhoneQuestCard({
         {iconLabel}
       </Box>
       <Box sx={{ minWidth: 0, flex: 1 }}>
-        <Typography sx={{ fontSize: 12, fontWeight: 600, color: redesignedPalette.text.primary, mb: 0.25 }}>
+        <Typography
+          sx={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: redesignedPalette.text.primary,
+            mb: 0.25,
+          }}
+        >
           {title}
         </Typography>
-        <Typography sx={{ fontSize: 10, color: redesignedPalette.text.muted }}>{xp}</Typography>
+        <Typography sx={{ fontSize: 10, color: redesignedPalette.text.muted }}>
+          {xp}
+        </Typography>
       </Box>
-      <Typography sx={{ fontSize: 11, color: redesignedPalette.text.primary }}>{hearts}</Typography>
+      <Typography sx={{ fontSize: 11, color: redesignedPalette.text.primary }}>
+        {hearts}
+      </Typography>
     </Box>
   );
 }
@@ -202,10 +226,22 @@ function HeroPhoneMockup() {
             gap: 1.5,
           }}
         >
-          <Typography sx={{ fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 17, fontWeight: 300 }}>
+          <Typography
+            sx={{
+              fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+              fontSize: 17,
+              fontWeight: 300,
+            }}
+          >
             Tuesday, 13 May
           </Typography>
-          <Typography sx={{ mt: -0.75, fontSize: 11, color: redesignedPalette.text.muted }}>
+          <Typography
+            sx={{
+              mt: -0.75,
+              fontSize: 11,
+              color: redesignedPalette.text.muted,
+            }}
+          >
             Spanish / Level 8
           </Typography>
 
@@ -218,20 +254,59 @@ function HeroPhoneMockup() {
               py: 1.5,
             }}
           >
-            <Stack direction="row" justifyContent="space-between" sx={{ mb: 1 }}>
-              <Typography sx={{ fontSize: 10, color: redesignedPalette.text.muted, letterSpacing: "0.06em", textTransform: "uppercase", fontWeight: 600 }}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              sx={{ mb: 1 }}
+            >
+              <Typography
+                sx={{
+                  fontSize: 10,
+                  color: redesignedPalette.text.muted,
+                  letterSpacing: "0.06em",
+                  textTransform: "uppercase",
+                  fontWeight: 600,
+                }}
+              >
                 Daily XP
               </Typography>
-              <Typography sx={{ fontSize: 11, color: redesignedPalette.accent.warm, fontWeight: 600 }}>
+              <Typography
+                sx={{
+                  fontSize: 11,
+                  color: redesignedPalette.accent.warm,
+                  fontWeight: 600,
+                }}
+              >
                 840 / 1200
               </Typography>
             </Stack>
-            <Box sx={{ height: 4, borderRadius: 99, backgroundColor: redesignedPalette.surface.tertiary, overflow: "hidden" }}>
-              <Box sx={{ width: "68%", height: "100%", backgroundColor: redesignedPalette.accent.warm }} />
+            <Box
+              sx={{
+                height: 4,
+                borderRadius: 99,
+                backgroundColor: redesignedPalette.surface.tertiary,
+                overflow: "hidden",
+              }}
+            >
+              <Box
+                sx={{
+                  width: "68%",
+                  height: "100%",
+                  backgroundColor: redesignedPalette.accent.warm,
+                }}
+              />
             </Box>
           </Box>
 
-          <Typography sx={{ fontSize: 10, color: redesignedPalette.text.muted, letterSpacing: "0.07em", textTransform: "uppercase", fontWeight: 600 }}>
+          <Typography
+            sx={{
+              fontSize: 10,
+              color: redesignedPalette.text.muted,
+              letterSpacing: "0.07em",
+              textTransform: "uppercase",
+              fontWeight: 600,
+            }}
+          >
             Today&apos;s quests
           </Typography>
 
@@ -260,10 +335,18 @@ function HeroPhoneMockup() {
           <Stack
             direction="row"
             justifyContent="space-around"
-            sx={{ mt: "auto", pt: 1, borderTop: `1px solid ${redesignedPalette.border}` }}
+            sx={{
+              mt: "auto",
+              pt: 1,
+              borderTop: `1px solid ${redesignedPalette.border}`,
+            }}
           >
             <Typography sx={{ fontSize: 18, opacity: 0.4 }}>HM</Typography>
-            <Typography sx={{ fontSize: 18, color: redesignedPalette.accent.warm }}>QS</Typography>
+            <Typography
+              sx={{ fontSize: 18, color: redesignedPalette.accent.warm }}
+            >
+              QS
+            </Typography>
             <Typography sx={{ fontSize: 18, opacity: 0.4 }}>DK</Typography>
             <Typography sx={{ fontSize: 18, opacity: 0.4 }}>PF</Typography>
           </Stack>
@@ -288,11 +371,17 @@ function FeatureSection({
 }) {
   return (
     <Box sx={{ borderTop: `1px solid ${redesignedPalette.border}` }} id={id}>
-      <Container maxWidth="lg" sx={{ px: sectionPaddingX, py: sectionPaddingY }}>
+      <Container
+        maxWidth="lg"
+        sx={{ px: sectionPaddingX, py: sectionPaddingY }}
+      >
         <Box
           sx={{
             display: "grid",
-            gridTemplateColumns: { xs: "1fr", md: "minmax(0, 1fr) minmax(0, 1fr)" },
+            gridTemplateColumns: {
+              xs: "1fr",
+              md: "minmax(0, 1fr) minmax(0, 1fr)",
+            },
             gap: { xs: 6, md: 10 },
             alignItems: "center",
           }}
@@ -300,7 +389,15 @@ function FeatureSection({
           <Box sx={{ order: { xs: 1, md: reverse ? 2 : 1 } }}>
             {heading}
             {details ? (
-              <Typography sx={{ mt: 4, fontSize: 14, lineHeight: 1.7, color: redesignedPalette.text.muted, maxWidth: 500 }}>
+              <Typography
+                sx={{
+                  mt: 4,
+                  fontSize: 14,
+                  lineHeight: 1.7,
+                  color: redesignedPalette.text.muted,
+                  maxWidth: 500,
+                }}
+              >
                 {details}
               </Typography>
             ) : null}
@@ -338,10 +435,30 @@ function ScanVisual() {
         }}
       >
         {[
-          { top: 12, left: 12, borderWidth: "2px 0 0 2px", borderRadius: "3px 0 0 0" },
-          { top: 12, right: 12, borderWidth: "2px 2px 0 0", borderRadius: "0 3px 0 0" },
-          { bottom: 12, left: 12, borderWidth: "0 0 2px 2px", borderRadius: "0 0 0 3px" },
-          { bottom: 12, right: 12, borderWidth: "0 2px 2px 0", borderRadius: "0 0 3px 0" },
+          {
+            top: 12,
+            left: 12,
+            borderWidth: "2px 0 0 2px",
+            borderRadius: "3px 0 0 0",
+          },
+          {
+            top: 12,
+            right: 12,
+            borderWidth: "2px 2px 0 0",
+            borderRadius: "0 3px 0 0",
+          },
+          {
+            bottom: 12,
+            left: 12,
+            borderWidth: "0 0 2px 2px",
+            borderRadius: "0 0 0 3px",
+          },
+          {
+            bottom: 12,
+            right: 12,
+            borderWidth: "0 2px 2px 0",
+            borderRadius: "0 0 3px 0",
+          },
         ].map((corner, index) => (
           <Box
             key={index}
@@ -364,7 +481,63 @@ function ScanVisual() {
             fontFamily: "Georgia, serif",
           }}
         >
-          El menu del dia incluye <Box component="span" sx={{ px: 0.5, py: 0.125, color: redesignedPalette.accent.warm, backgroundColor: "rgba(200,124,59,0.22)", borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`, borderRadius: "3px" }}>sopa</Box> de <Box component="span" sx={{ px: 0.5, py: 0.125, color: redesignedPalette.accent.warm, backgroundColor: "rgba(200,124,59,0.22)", borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`, borderRadius: "3px" }}>lentejas</Box> con pan, <Box component="span" sx={{ px: 0.5, py: 0.125, color: redesignedPalette.accent.warm, backgroundColor: "rgba(200,124,59,0.22)", borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`, borderRadius: "3px" }}>pollo</Box> asado con patatas y ensalada, y de postre <Box component="span" sx={{ px: 0.5, py: 0.125, color: redesignedPalette.accent.warm, backgroundColor: "rgba(200,124,59,0.22)", borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`, borderRadius: "3px" }}>flan</Box> casero.
+          El menu del dia incluye{" "}
+          <Box
+            component="span"
+            sx={{
+              px: 0.5,
+              py: 0.125,
+              color: redesignedPalette.accent.warm,
+              backgroundColor: "rgba(200,124,59,0.22)",
+              borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`,
+              borderRadius: "3px",
+            }}
+          >
+            sopa
+          </Box>{" "}
+          de{" "}
+          <Box
+            component="span"
+            sx={{
+              px: 0.5,
+              py: 0.125,
+              color: redesignedPalette.accent.warm,
+              backgroundColor: "rgba(200,124,59,0.22)",
+              borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`,
+              borderRadius: "3px",
+            }}
+          >
+            lentejas
+          </Box>{" "}
+          con pan,{" "}
+          <Box
+            component="span"
+            sx={{
+              px: 0.5,
+              py: 0.125,
+              color: redesignedPalette.accent.warm,
+              backgroundColor: "rgba(200,124,59,0.22)",
+              borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`,
+              borderRadius: "3px",
+            }}
+          >
+            pollo
+          </Box>{" "}
+          asado con patatas y ensalada, y de postre{" "}
+          <Box
+            component="span"
+            sx={{
+              px: 0.5,
+              py: 0.125,
+              color: redesignedPalette.accent.warm,
+              backgroundColor: "rgba(200,124,59,0.22)",
+              borderBottom: `1.5px solid ${redesignedPalette.accent.warm}`,
+              borderRadius: "3px",
+            }}
+          >
+            flan
+          </Box>{" "}
+          casero.
         </Typography>
         <Typography
           sx={{
@@ -381,7 +554,12 @@ function ScanVisual() {
         </Typography>
       </Box>
       <Stack direction="row" flexWrap="wrap" useFlexGap gap={1}>
-        {["sopa / soup", "lentejas / lentils", "pollo / chicken", "flan / custard"].map((chip) => (
+        {[
+          "sopa / soup",
+          "lentejas / lentils",
+          "pollo / chicken",
+          "flan / custard",
+        ].map((chip) => (
           <Box
             key={chip}
             sx={{
@@ -425,10 +603,20 @@ function ScanVisual() {
         }}
       >
         <Box>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: redesignedPalette.text.primary }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              fontWeight: 600,
+              color: redesignedPalette.text.primary,
+            }}
+          >
             Add to Spanish deck
           </Typography>
-          <Typography sx={{ fontSize: 11, color: redesignedPalette.text.muted }}>4 new words</Typography>
+          <Typography
+            sx={{ fontSize: 11, color: redesignedPalette.text.muted }}
+          >
+            4 new words
+          </Typography>
         </Box>
         <Button
           type="button"
@@ -457,7 +645,13 @@ function ScanVisual() {
 function GamesVisual() {
   return (
     <Stack spacing={1.5}>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" }, gap: 1.5 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: { xs: "1fr", md: "1fr 1fr" },
+          gap: 1.5,
+        }}
+      >
         <Box
           sx={{
             p: 3,
@@ -466,14 +660,32 @@ function GamesVisual() {
             backgroundColor: "#161310",
           }}
         >
-          <Typography sx={{ mb: 1.25, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: redesignedPalette.accent.warm, fontWeight: 600 }}>
+          <Typography
+            sx={{
+              mb: 1.25,
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: redesignedPalette.accent.warm,
+              fontWeight: 600,
+            }}
+          >
             Match pairs
           </Typography>
-          <Typography sx={{ mb: 2, fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 20, fontWeight: 300 }}>
+          <Typography
+            sx={{
+              mb: 2,
+              fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+              fontSize: 20,
+              fontWeight: 300,
+            }}
+          >
             Match 5
           </Typography>
           <Typography sx={{ mb: 1.5, fontSize: 13 }}>OO.</Typography>
-          <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.75 }}>
+          <Box
+            sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 0.75 }}
+          >
             {[
               ["butterfly", true, false],
               ["mariposa", true, false],
@@ -516,14 +728,38 @@ function GamesVisual() {
             backgroundColor: "#161310",
           }}
         >
-          <Typography sx={{ mb: 1.25, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: redesignedPalette.accent.success, fontWeight: 600 }}>
+          <Typography
+            sx={{
+              mb: 1.25,
+              fontSize: 10,
+              letterSpacing: "0.08em",
+              textTransform: "uppercase",
+              color: redesignedPalette.accent.success,
+              fontWeight: 600,
+            }}
+          >
             Build a word
           </Typography>
-          <Typography sx={{ mb: 2, fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 20, fontWeight: 300 }}>
+          <Typography
+            sx={{
+              mb: 2,
+              fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+              fontSize: 20,
+              fontWeight: 300,
+            }}
+          >
             mariposa
           </Typography>
           <Typography sx={{ mb: 1.5, fontSize: 13 }}>OOO</Typography>
-          <Stack direction="row" spacing={0.625} sx={{ mb: 1.25, pb: 0.75, borderBottom: `2px solid ${redesignedPalette.border}` }}>
+          <Stack
+            direction="row"
+            spacing={0.625}
+            sx={{
+              mb: 1.25,
+              pb: 0.75,
+              borderBottom: `2px solid ${redesignedPalette.border}`,
+            }}
+          >
             {["m", "a", "r", "i", "", "", "", ""].map((letter, index) => (
               <Box
                 key={index}
@@ -536,8 +772,12 @@ function GamesVisual() {
                   fontSize: 14,
                   fontWeight: 600,
                   color: redesignedPalette.text.primary,
-                  backgroundColor: letter ? redesignedPalette.surface.tertiary : "transparent",
-                  border: letter ? "none" : `1px dashed ${redesignedPalette.border}`,
+                  backgroundColor: letter
+                    ? redesignedPalette.surface.tertiary
+                    : "transparent",
+                  border: letter
+                    ? "none"
+                    : `1px dashed ${redesignedPalette.border}`,
                 }}
               >
                 {letter}
@@ -585,21 +825,62 @@ function GamesVisual() {
           backgroundColor: "#161310",
         }}
       >
-        <Typography sx={{ mb: 1.25, fontSize: 10, letterSpacing: "0.08em", textTransform: "uppercase", color: redesignedPalette.accent.gold, fontWeight: 600 }}>
+        <Typography
+          sx={{
+            mb: 1.25,
+            fontSize: 10,
+            letterSpacing: "0.08em",
+            textTransform: "uppercase",
+            color: redesignedPalette.accent.gold,
+            fontWeight: 600,
+          }}
+        >
           Guess translation
         </Typography>
         <Stack direction="row" justifyContent="space-between" sx={{ mb: 1.75 }}>
-          <Typography sx={{ fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 20, fontWeight: 300 }}>
+          <Typography
+            sx={{
+              fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+              fontSize: 20,
+              fontWeight: 300,
+            }}
+          >
             atardecer
           </Typography>
-          <Typography sx={{ fontSize: 11, color: redesignedPalette.text.muted }}>3 / 8</Typography>
+          <Typography
+            sx={{ fontSize: 11, color: redesignedPalette.text.muted }}
+          >
+            3 / 8
+          </Typography>
         </Stack>
-        <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" }, gap: 0.875 }}>
+        <Box
+          sx={{
+            display: "grid",
+            gridTemplateColumns: { xs: "1fr", sm: "1fr 1fr" },
+            gap: 0.875,
+          }}
+        >
           {[
-            ["sunset", redesignedPalette.accent.success, redesignedPalette.accentBackground.success],
-            ["sunrise", redesignedPalette.border, redesignedPalette.surface.secondary],
-            ["evening", redesignedPalette.accent.danger, redesignedPalette.accentBackground.danger],
-            ["twilight", redesignedPalette.border, redesignedPalette.surface.secondary],
+            [
+              "sunset",
+              redesignedPalette.accent.success,
+              redesignedPalette.accentBackground.success,
+            ],
+            [
+              "sunrise",
+              redesignedPalette.border,
+              redesignedPalette.surface.secondary,
+            ],
+            [
+              "evening",
+              redesignedPalette.accent.danger,
+              redesignedPalette.accentBackground.danger,
+            ],
+            [
+              "twilight",
+              redesignedPalette.border,
+              redesignedPalette.surface.secondary,
+            ],
           ].map(([label, borderColor, backgroundColor]) => (
             <Box
               key={String(label)}
@@ -649,15 +930,43 @@ function SharingVisual() {
         }}
       >
         <Typography sx={{ mb: 1.25, fontSize: 28 }}>ES</Typography>
-        <Typography sx={{ mb: 0.5, fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 22, fontWeight: 300 }}>
+        <Typography
+          sx={{
+            mb: 0.5,
+            fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+            fontSize: 22,
+            fontWeight: 300,
+          }}
+        >
           Spanish
         </Typography>
-        <Typography sx={{ fontSize: 13, color: redesignedPalette.text.muted }}>47 words / 62% mastered</Typography>
-        <Box sx={{ mt: 1.5, height: 3, borderRadius: 99, backgroundColor: redesignedPalette.surface.tertiary, overflow: "hidden" }}>
-          <Box sx={{ width: "62%", height: "100%", backgroundColor: redesignedPalette.accent.warm }} />
+        <Typography sx={{ fontSize: 13, color: redesignedPalette.text.muted }}>
+          47 words / 62% mastered
+        </Typography>
+        <Box
+          sx={{
+            mt: 1.5,
+            height: 3,
+            borderRadius: 99,
+            backgroundColor: redesignedPalette.surface.tertiary,
+            overflow: "hidden",
+          }}
+        >
+          <Box
+            sx={{
+              width: "62%",
+              height: "100%",
+              backgroundColor: redesignedPalette.accent.warm,
+            }}
+          />
         </Box>
       </Box>
-      <Stack direction="row" justifyContent="space-between" alignItems="center" spacing={2}>
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        spacing={2}
+      >
         <Stack direction="row" alignItems="center" spacing={1.5}>
           <Stack direction="row" sx={{ pr: 1 }}>
             {[
@@ -685,7 +994,9 @@ function SharingVisual() {
               </Box>
             ))}
           </Stack>
-          <Typography sx={{ fontSize: 13, color: redesignedPalette.text.secondary }}>
+          <Typography
+            sx={{ fontSize: 13, color: redesignedPalette.text.secondary }}
+          >
             Alex, Maria and Lena are learning this deck
           </Typography>
         </Stack>
@@ -740,7 +1051,13 @@ function SharingVisual() {
           gap: 2,
         }}
       >
-        <Typography sx={{ fontSize: 11, color: redesignedPalette.text.secondary, fontFamily: "ui-monospace, monospace" }}>
+        <Typography
+          sx={{
+            fontSize: 11,
+            color: redesignedPalette.text.secondary,
+            fontFamily: "ui-monospace, monospace",
+          }}
+        >
           vocado.app/d/es-alex-47
         </Typography>
         <Button
@@ -773,10 +1090,30 @@ function LanguagesVisual() {
         backgroundColor: "#161310",
       }}
     >
-      <Typography sx={{ mb: 1.5, fontSize: 11, letterSpacing: "0.08em", textTransform: "uppercase", color: redesignedPalette.text.muted, fontWeight: 600 }}>
+      <Typography
+        sx={{
+          mb: 1.5,
+          fontSize: 11,
+          letterSpacing: "0.08em",
+          textTransform: "uppercase",
+          color: redesignedPalette.text.muted,
+          fontWeight: 600,
+        }}
+      >
         {getTranslation("landing.languages.yourDecks")}
       </Typography>
-      <Box sx={{ display: "grid", gridTemplateColumns: { xs: "1fr", sm: "repeat(2, 1fr)", md: "repeat(3, 1fr)" }, gap: 1.25, mb: 2 }}>
+      <Box
+        sx={{
+          display: "grid",
+          gridTemplateColumns: {
+            xs: "1fr",
+            sm: "repeat(2, 1fr)",
+            md: "repeat(3, 1fr)",
+          },
+          gap: 1.25,
+          mb: 2,
+        }}
+      >
         {languageDecks.map((deck) => (
           <Box
             key={deck.pair}
@@ -784,14 +1121,32 @@ function LanguagesVisual() {
               p: 1.75,
               borderRadius: 1.5,
               border: `1px solid ${deck.active ? redesignedPalette.accent.warm : redesignedPalette.border}`,
-              backgroundColor: deck.active ? redesignedPalette.accentBackground.warm : redesignedPalette.surface.secondary,
-              transition: "border-color 0.15s ease, background-color 0.15s ease",
+              backgroundColor: deck.active
+                ? redesignedPalette.accentBackground.warm
+                : redesignedPalette.surface.secondary,
+              transition:
+                "border-color 0.15s ease, background-color 0.15s ease",
             }}
           >
-            <Typography sx={{ fontSize: 22, color: deck.active ? redesignedPalette.accent.warm : redesignedPalette.text.primary, mb: 0.5 }}>
+            <Typography
+              sx={{
+                fontSize: 22,
+                color: deck.active
+                  ? redesignedPalette.accent.warm
+                  : redesignedPalette.text.primary,
+                mb: 0.5,
+              }}
+            >
               {deck.pair}
             </Typography>
-            <Typography sx={{ fontSize: 11, color: deck.active ? redesignedPalette.accent.warm : redesignedPalette.text.secondary }}>
+            <Typography
+              sx={{
+                fontSize: 11,
+                color: deck.active
+                  ? redesignedPalette.accent.warm
+                  : redesignedPalette.text.secondary,
+              }}
+            >
               {deck.label}
             </Typography>
           </Box>
@@ -811,7 +1166,13 @@ function LanguagesVisual() {
           {getTranslation("landing.languages.new")}
         </Box>
       </Box>
-      <Typography sx={{ fontSize: 12, color: redesignedPalette.text.muted, textAlign: "center" }}>
+      <Typography
+        sx={{
+          fontSize: 12,
+          color: redesignedPalette.text.muted,
+          textAlign: "center",
+        }}
+      >
         {getTranslation("landing.languages.note")}
       </Typography>
     </Box>
@@ -821,7 +1182,13 @@ function LanguagesVisual() {
 export default function MarketingLanding() {
   return (
     <RedesignedThemeProvider>
-      <Box sx={{ minHeight: "100vh", backgroundColor: redesignedPalette.canvas, color: redesignedPalette.text.primary }}>
+      <Box
+        sx={{
+          minHeight: "100vh",
+          backgroundColor: redesignedPalette.canvas,
+          color: redesignedPalette.text.primary,
+        }}
+      >
         <Box
           component="header"
           sx={{
@@ -847,21 +1214,68 @@ export default function MarketingLanding() {
           >
             <Stack direction="row" alignItems="center" spacing={1.25}>
               <BrandMark />
-              <Typography sx={{ fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 24, fontWeight: 300, letterSpacing: "-0.025em" }}>
+              <Typography
+                sx={{
+                  fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+                  fontSize: 24,
+                  fontWeight: 300,
+                  letterSpacing: "-0.025em",
+                }}
+              >
                 {getTranslation("landing.appName")}
               </Typography>
             </Stack>
-            <Stack direction="row" spacing={4} sx={{ display: { xs: "none", md: "flex" }, color: redesignedPalette.text.secondary, fontSize: 14 }}>
-              <Box component="a" href="#scan" sx={{ color: "inherit", textDecoration: "none", "&:hover": { color: redesignedPalette.text.primary } }}>
+            <Stack
+              direction="row"
+              spacing={4}
+              sx={{
+                display: { xs: "none", md: "flex" },
+                color: redesignedPalette.text.secondary,
+                fontSize: 14,
+              }}
+            >
+              <Box
+                component="a"
+                href="#scan"
+                sx={{
+                  color: "inherit",
+                  textDecoration: "none",
+                  "&:hover": { color: redesignedPalette.text.primary },
+                }}
+              >
                 {getTranslation("landing.nav.scan")}
               </Box>
-              <Box component="a" href="#games" sx={{ color: "inherit", textDecoration: "none", "&:hover": { color: redesignedPalette.text.primary } }}>
+              <Box
+                component="a"
+                href="#games"
+                sx={{
+                  color: "inherit",
+                  textDecoration: "none",
+                  "&:hover": { color: redesignedPalette.text.primary },
+                }}
+              >
                 {getTranslation("landing.nav.games")}
               </Box>
-              <Box component="a" href="#sharing" sx={{ color: "inherit", textDecoration: "none", "&:hover": { color: redesignedPalette.text.primary } }}>
+              <Box
+                component="a"
+                href="#sharing"
+                sx={{
+                  color: "inherit",
+                  textDecoration: "none",
+                  "&:hover": { color: redesignedPalette.text.primary },
+                }}
+              >
                 {getTranslation("landing.nav.sharing")}
               </Box>
-              <Box component="a" href="#languages" sx={{ color: "inherit", textDecoration: "none", "&:hover": { color: redesignedPalette.text.primary } }}>
+              <Box
+                component="a"
+                href="#languages"
+                sx={{
+                  color: "inherit",
+                  textDecoration: "none",
+                  "&:hover": { color: redesignedPalette.text.primary },
+                }}
+              >
                 {getTranslation("landing.nav.languages")}
               </Box>
             </Stack>
@@ -936,7 +1350,17 @@ export default function MarketingLanding() {
               border: `1px solid rgba(82, 184, 106, 0.07)`,
             }}
           />
-          <Container maxWidth="lg" sx={{ px: sectionPaddingX, pt: { xs: 14, md: 16 }, pb: { xs: 10, md: 12 }, textAlign: "center", position: "relative", zIndex: 1 }}>
+          <Container
+            maxWidth="lg"
+            sx={{
+              px: sectionPaddingX,
+              pt: { xs: 14, md: 16 },
+              pb: { xs: 10, md: 12 },
+              textAlign: "center",
+              position: "relative",
+              zIndex: 1,
+            }}
+          >
             <Box
               sx={{
                 display: "inline-flex",
@@ -983,7 +1407,13 @@ export default function MarketingLanding() {
             >
               {getTranslation("landing.hero.titleLineOne")}
               <br />
-              <Box component="em" sx={{ fontStyle: "italic", color: redesignedPalette.accent.warm }}>
+              <Box
+                component="em"
+                sx={{
+                  fontStyle: "italic",
+                  color: redesignedPalette.accent.warm,
+                }}
+              >
                 {getTranslation("landing.hero.titleLineTwo")}
               </Box>
             </Typography>
@@ -1002,22 +1432,55 @@ export default function MarketingLanding() {
             <Box sx={{ maxWidth: 460, mx: "auto" }}>
               <LandingInstallButtons justify="center" />
             </Box>
-            <Typography sx={{ mt: 3, fontSize: 13, color: redesignedPalette.text.muted }}>
+            <Typography
+              sx={{ mt: 3, fontSize: 13, color: redesignedPalette.text.muted }}
+            >
               {getTranslation("landing.hero.downloadNote")}
             </Typography>
             <HeroPhoneMockup />
           </Container>
         </Box>
 
-        <Box sx={{ borderTop: `1px solid ${redesignedPalette.border}`, borderBottom: `1px solid ${redesignedPalette.border}`, px: sectionPaddingX, py: { xs: 6, md: 7.5 } }}>
+        <Box
+          sx={{
+            borderTop: `1px solid ${redesignedPalette.border}`,
+            borderBottom: `1px solid ${redesignedPalette.border}`,
+            px: sectionPaddingX,
+            py: { xs: 6, md: 7.5 },
+          }}
+        >
           <Container maxWidth="lg" sx={{ px: 0 }}>
-            <Box sx={{ display: "grid", gridTemplateColumns: { xs: "repeat(2, minmax(0, 1fr))", md: "repeat(4, minmax(0, 1fr))" }, gap: 3 }}>
+            <Box
+              sx={{
+                display: "grid",
+                gridTemplateColumns: {
+                  xs: "repeat(2, minmax(0, 1fr))",
+                  md: "repeat(4, minmax(0, 1fr))",
+                },
+                gap: 3,
+              }}
+            >
               {stats.map((stat) => (
                 <Box key={stat.label} sx={{ textAlign: "center" }}>
-                  <Typography sx={{ fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: { xs: "2.6rem", md: "3.25rem" }, fontWeight: 200, lineHeight: 1, letterSpacing: "-0.03em", color: stat.color || redesignedPalette.text.primary, mb: 1 }}>
+                  <Typography
+                    sx={{
+                      fontFamily:
+                        "var(--font-fraunces, Fraunces, Georgia, serif)",
+                      fontSize: { xs: "2.6rem", md: "3.25rem" },
+                      fontWeight: 200,
+                      lineHeight: 1,
+                      letterSpacing: "-0.03em",
+                      color: stat.color || redesignedPalette.text.primary,
+                      mb: 1,
+                    }}
+                  >
                     {stat.value}
                   </Typography>
-                  <Typography sx={{ fontSize: 14, color: redesignedPalette.text.muted }}>{stat.label}</Typography>
+                  <Typography
+                    sx={{ fontSize: 14, color: redesignedPalette.text.muted }}
+                  >
+                    {stat.label}
+                  </Typography>
                 </Box>
               ))}
             </Box>
@@ -1082,7 +1545,10 @@ export default function MarketingLanding() {
           visual={<LanguagesVisual />}
         />
 
-        <Container maxWidth="lg" sx={{ px: sectionPaddingX, pb: { xs: 10, md: 15 } }}>
+        <Container
+          maxWidth="lg"
+          sx={{ px: sectionPaddingX, pb: { xs: 10, md: 15 } }}
+        >
           <Box
             sx={{
               position: "relative",
@@ -1134,13 +1600,27 @@ export default function MarketingLanding() {
             >
               {getTranslation("landing.cta.description")}
             </Typography>
-            <Box sx={{ position: "relative", zIndex: 1, maxWidth: 460, mx: "auto" }}>
+            <Box
+              sx={{
+                position: "relative",
+                zIndex: 1,
+                maxWidth: 460,
+                mx: "auto",
+              }}
+            >
               <LandingInstallButtons justify="center" />
             </Box>
           </Box>
         </Container>
 
-        <Box component="footer" sx={{ borderTop: `1px solid ${redesignedPalette.border}`, px: sectionPaddingX, py: 5 }}>
+        <Box
+          component="footer"
+          sx={{
+            borderTop: `1px solid ${redesignedPalette.border}`,
+            px: sectionPaddingX,
+            py: 5,
+          }}
+        >
           <Container
             maxWidth="lg"
             sx={{
@@ -1152,24 +1632,57 @@ export default function MarketingLanding() {
               gap: 2.5,
             }}
           >
-            <Typography sx={{ fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)", fontSize: 20, fontWeight: 300, color: redesignedPalette.text.secondary }}>
+            <Typography
+              sx={{
+                fontFamily: "var(--font-fraunces, Fraunces, Georgia, serif)",
+                fontSize: 20,
+                fontWeight: 300,
+                color: redesignedPalette.text.secondary,
+              }}
+            >
               {getTranslation("landing.appName")}
             </Typography>
-            <Stack direction="row" spacing={3.5} sx={{ flexWrap: "wrap", color: redesignedPalette.text.muted, fontSize: 13 }}>
-              <Box component="a" href="#" sx={{ color: "inherit", textDecoration: "none" }}>
+            <Stack
+              direction="row"
+              spacing={3.5}
+              sx={{
+                flexWrap: "wrap",
+                color: redesignedPalette.text.muted,
+                fontSize: 13,
+              }}
+            >
+              <Box
+                component="a"
+                href="#"
+                sx={{ color: "inherit", textDecoration: "none" }}
+              >
                 {getTranslation("landing.footer.privacy")}
               </Box>
-              <Box component="a" href="#" sx={{ color: "inherit", textDecoration: "none" }}>
+              <Box
+                component="a"
+                href="#"
+                sx={{ color: "inherit", textDecoration: "none" }}
+              >
                 {getTranslation("landing.footer.terms")}
               </Box>
-              <Box component="a" href="#" sx={{ color: "inherit", textDecoration: "none" }}>
+              <Box
+                component="a"
+                href="#"
+                sx={{ color: "inherit", textDecoration: "none" }}
+              >
                 {getTranslation("landing.footer.support")}
               </Box>
-              <Box component="a" href="#" sx={{ color: "inherit", textDecoration: "none" }}>
+              <Box
+                component="a"
+                href="#"
+                sx={{ color: "inherit", textDecoration: "none" }}
+              >
                 {getTranslation("landing.footer.pressKit")}
               </Box>
             </Stack>
-            <Typography sx={{ fontSize: 12, color: redesignedPalette.text.muted }}>
+            <Typography
+              sx={{ fontSize: 12, color: redesignedPalette.text.muted }}
+            >
               {getTranslation("landing.footer.copyright")}
             </Typography>
           </Container>
